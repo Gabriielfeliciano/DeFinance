@@ -1,23 +1,73 @@
 :host {
   display: block;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .wallet-form {
   display: flex;
   gap: 8px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: border-color 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--accent);
+  }
 }
 
 .address-input {
   flex: 1;
   min-width: 0;
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.95rem;
+  outline: none;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &[aria-invalid='true'] {
+    color: var(--danger);
+  }
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.submit {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-strong);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.error {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--danger);
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+@media (max-width: 480px) {
+  .wallet-form {
+    flex-direction: column;
+    border-radius: var(--radius);
+  }
 }

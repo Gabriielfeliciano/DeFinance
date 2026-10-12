@@ -1,5 +1,25 @@
 :host {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 6px;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.total {
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.networks {
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }

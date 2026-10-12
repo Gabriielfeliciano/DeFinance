@@ -107,4 +107,55 @@ describe('DashboardComponent', () => {
       'Nenhum ativo com valor de mercado encontrado',
     );
   });
+
+  describe('chain filter', () => {
+    const ARB: TokenItem = { id: 'arbitrum:0xarb', chain: 'arbitrum', symbol: 'ARB', name: 'Arbitrum', balance: 100, priceUsd: 0.5, valueUsd: 50 };
+    const USDC_ARB: TokenItem = { id: 'arbitrum:0xusdc', chain: 'arbitrum', symbol: 'USDC', name: 'USD Coin', balance: 30, priceUsd: 1, valueUsd: 30 };
+
+    async function renderWallet() {
+      wallet.status.set('success');
+      wallet.tokens.set([ETH, ARB, USDC_ARB]);
+      wallet.totalValueUsd.set(1000);
+      return render();
+    }
+
+    const text = (el: HTMLElement, testId: string) =>
+      el.querySelector(`[data-testid="${testId}"]`)?.textContent?.trim();
+    const rowCount = (el: HTMLElement) => el.querySelectorAll('[data-testid="token-row"]').length;
+    const chip = (el: HTMLElement, id: string) =>
+      el.querySelector<HTMLButtonElement>(`[data-testid="chip-${id}"]`)!;
+
+    it('shows the whole wallet by default', async () => {
+      const { el } = await renderWallet();
+      expect(chip(el, 'all').getAttribute('aria-pressed')).toBe('true');
+      expect(rowCount(el)).toBe(3);
+      expect(text(el, 'total')).toBe('$1,000.00');
+      expect(text(el, 'summary-label')).toBe('Valor total');
+    });
+
+    it('narrows total, label and list to the chosen chain', async () => {
+      const { fixture, el } = await renderWallet();
+      chip(el, 'arbitrum').click();
+      await fixture.whenStable();
+      expect(rowCount(el)).toBe(2);
+      expect(text(el, 'total')).toBe('$80.00');
+      expect(text(el, 'summary-label')).toBe('Valor em Arbitrum');
+      expect(text(el, 'summary-caption')).toBe('2 tokens nesta rede');
+    });
+
+    it('disables chains where the wallet has nothing', async () => {
+      const { el } = await renderWallet();
+      expect(chip(el, 'base').disabled).toBe(true);
+    });
+
+    it('goes back to every chain when another address is loaded', async () => {
+      const { fixture, el } = await renderWallet();
+      chip(el, 'arbitrum').click();
+      await fixture.whenStable();
+      await submitAddress(fixture, ADDRESS);
+      expect(wallet.load).toHaveBeenCalledWith(ADDRESS);
+      expect(chip(el, 'all').getAttribute('aria-pressed')).toBe('true');
+      expect(rowCount(el)).toBe(3);
+    });
+  });
 });

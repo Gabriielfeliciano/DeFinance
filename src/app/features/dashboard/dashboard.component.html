@@ -35,17 +35,23 @@
   }
   @case ('success') {
     <section class="results">
+      <app-chain-filter [selected]="selectedChain()" [counts]="chainCounts()" (selectedChange)="selectedChain.set($event)" />
       <div class="overview">
-        <app-portfolio-summary class="card" [totalValueUsd]="wallet.totalValueUsd()" />
+        <app-portfolio-summary
+          class="card"
+          [totalValueUsd]="visibleTotal()"
+          [label]="summaryLabel()"
+          [caption]="summaryCaption()"
+        />
         <div class="card chart-card">
           @defer (on idle) {
-            <app-portfolio-chart [tokens]="wallet.tokens()" />
+            <app-portfolio-chart [tokens]="visibleTokens()" />
           } @placeholder {
             <div class="chart-placeholder" data-testid="chart-placeholder"></div>
           }
         </div>
       </div>
-      <app-token-list class="card" [tokens]="wallet.tokens()" />
+      <app-token-list class="card" [tokens]="visibleTokens()" />
     </section>
   }
 }

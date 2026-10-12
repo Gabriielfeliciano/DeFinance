@@ -19,4 +19,24 @@ describe('PortfolioSummaryComponent', () => {
     await fixture.whenStable();
     expect(total()).toBe('$1,234,567.89');
   });
+
+  it('shows the default label and caption for the whole wallet', async () => {
+    const fixture = TestBed.createComponent(PortfolioSummaryComponent);
+    fixture.componentRef.setInput('totalValueUsd', 10);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="summary-label"]')?.textContent?.trim()).toBe('Valor total');
+    expect(el.querySelector('[data-testid="summary-caption"]')?.textContent?.trim()).toBe('Ethereum · Arbitrum · Base');
+  });
+
+  it('accepts a custom label and caption', async () => {
+    const fixture = TestBed.createComponent(PortfolioSummaryComponent);
+    fixture.componentRef.setInput('totalValueUsd', 10);
+    fixture.componentRef.setInput('label', 'Valor em Base');
+    fixture.componentRef.setInput('caption', '4 tokens nesta rede');
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="summary-label"]')?.textContent?.trim()).toBe('Valor em Base');
+    expect(el.querySelector('[data-testid="summary-caption"]')?.textContent?.trim()).toBe('4 tokens nesta rede');
+  });
 });

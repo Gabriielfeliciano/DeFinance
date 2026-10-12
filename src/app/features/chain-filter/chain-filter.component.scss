@@ -1,0 +1,80 @@
+:host {
+  display: block;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.chip--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    color: #fff;
+  }
+
+  .count {
+    color: inherit;
+    opacity: 0.85;
+  }
+}
+
+.count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot--ethereum {
+  background: var(--chain-ethereum);
+}
+
+.dot--arbitrum {
+  background: var(--chain-arbitrum);
+}
+
+.dot--base {
+  background: var(--chain-base);
+}

@@ -1,0 +1,21 @@
+<form class="wallet-form" (submit)="submit($event)" novalidate>
+  <label class="sr-only" for="wallet-address">Endereço da carteira</label>
+  <input
+    id="wallet-address"
+    class="address-input"
+    type="text"
+    name="address"
+    placeholder="0x…"
+    autocomplete="off"
+    spellcheck="false"
+    [value]="value()"
+    [disabled]="disabled()"
+    [attr.aria-invalid]="error() ? true : null"
+    [attr.aria-describedby]="error() ? 'wallet-address-error' : null"
+    (input)="onInput($event)"
+  />
+  <button type="submit" class="submit" [disabled]="disabled()">Ver carteira</button>
+</form>
+@if (error(); as message) {
+  <p id="wallet-address-error" class="error" role="alert" data-testid="address-error">{{ message }}</p>
+}

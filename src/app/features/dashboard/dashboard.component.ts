@@ -1,16 +1,18 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { WalletService } from '../../core/wallet.service';
+import { TokenListComponent } from '../token-list/token-list.component';
 import { WalletInputComponent } from '../wallet-input/wallet-input.component';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [WalletInputComponent],
+  imports: [WalletInputComponent, TokenListComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
-  protected readonly address = signal<string | null>(null);
+  protected readonly wallet = inject(WalletService);
 
   protected onAddress(address: string): void {
-    this.address.set(address);
+    this.wallet.load(address);
   }
 }

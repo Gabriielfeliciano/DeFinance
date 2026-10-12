@@ -1,0 +1,36 @@
+<h2 class="title">Tokens</h2>
+<div class="token-header" aria-hidden="true">
+  <span>Ativo</span>
+  <span class="col-amount">Quantidade</span>
+  <span class="col-price">Preço</span>
+  <span class="col-value">Valor</span>
+</div>
+<ul class="token-list" aria-label="Tokens da carteira">
+  @for (token of sortedTokens(); track token.id) {
+    <li class="token-row" data-testid="token-row">
+      @if (showLogo(token)) {
+        <img
+          class="logo"
+          [src]="token.logoUrl"
+          [alt]="token.symbol"
+          width="32"
+          height="32"
+          loading="lazy"
+          (error)="onLogoError(token.id)"
+        />
+      } @else {
+        <span class="logo logo--fallback" aria-hidden="true" data-testid="logo-fallback">{{ token.symbol.slice(0, 2) }}</span>
+      }
+      <div class="identity">
+        <span class="symbol" data-testid="symbol">{{ token.symbol }}</span>
+        <span class="meta">
+          <span class="chain chain--{{ token.chain }}" data-testid="chain">{{ chainLabels[token.chain] }}</span>
+          <span class="name">{{ token.name }}</span>
+        </span>
+      </div>
+      <span class="amount" data-testid="amount">{{ formatAmount(token.balance) }}</span>
+      <span class="price" data-testid="price">{{ formatPrice(token.priceUsd) }}</span>
+      <span class="value" data-testid="value">{{ formatUsd(token.valueUsd) }}</span>
+    </li>
+  }
+</ul>

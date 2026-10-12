@@ -4,6 +4,19 @@
   <app-wallet-input (addressSubmit)="onAddress($event)" />
 </header>
 
-@if (address(); as addr) {
-  <p class="hint" data-testid="pending-address">Carteira {{ addr }} pronta para consulta.</p>
+@switch (wallet.status()) {
+  @case ('loading') {
+    <p class="hint" data-testid="loading">Carregando carteira…</p>
+  }
+  @case ('error') {
+    <p class="hint" data-testid="error">Não foi possível carregar a carteira.</p>
+  }
+  @case ('empty') {
+    <p class="hint" data-testid="empty">Nenhum ativo com valor de mercado encontrado.</p>
+  }
+  @case ('success') {
+    <section class="results">
+      <app-token-list [tokens]="wallet.tokens()" />
+    </section>
+  }
 }

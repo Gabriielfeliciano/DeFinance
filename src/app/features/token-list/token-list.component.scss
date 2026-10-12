@@ -1,0 +1,29 @@
+:host {
+  display: block;
+}
+
+.token-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.token-header,
+.token-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.amount,
+.price,
+.value {
+  text-align: right;
+}

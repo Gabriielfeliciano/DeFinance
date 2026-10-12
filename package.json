@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:node": "vitest run --config vitest.node.config.mts",
-    "typecheck:server": "tsc -p tsconfig.server.json"
+    "typecheck:server": "tsc -p tsconfig.server.json",
+    "start:mock": "ng serve --configuration mock"
   },
   "private": true,
   "packageManager": "npm@11.12.1",

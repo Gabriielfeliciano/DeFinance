@@ -1,0 +1,4 @@
+.env*.local
+.angular
+dist
+node_modules

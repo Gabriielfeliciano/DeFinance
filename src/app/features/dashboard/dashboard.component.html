@@ -1,0 +1,9 @@
+<header class="hero">
+  <h1 class="brand">DeFinance</h1>
+  <p class="tagline">Cole o endereço público de uma carteira para ver seus ativos em Ethereum, Arbitrum e Base.</p>
+  <app-wallet-input (addressSubmit)="onAddress($event)" />
+</header>
+
+@if (address(); as addr) {
+  <p class="hint" data-testid="pending-address">Carteira {{ addr }} pronta para consulta.</p>
+}

@@ -6,10 +6,10 @@ describe('App', () => {
     await TestBed.configureTestingModule({ imports: [App] }).compileComponents();
   });
 
-  it('renders the DeFinance shell', async () => {
+  it('renders the dashboard inside the shell', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('main.app-shell h1')?.textContent).toContain('DeFinance');
+    expect(el.querySelector('main.app-shell app-dashboard')).not.toBeNull();
   });
 });

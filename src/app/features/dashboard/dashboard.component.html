@@ -16,7 +16,10 @@
   }
   @case ('success') {
     <section class="results">
-      <app-token-list [tokens]="wallet.tokens()" />
+      <div class="overview">
+        <app-portfolio-summary class="card" [totalValueUsd]="wallet.totalValueUsd()" />
+      </div>
+      <app-token-list class="card" [tokens]="wallet.tokens()" />
     </section>
   }
 }

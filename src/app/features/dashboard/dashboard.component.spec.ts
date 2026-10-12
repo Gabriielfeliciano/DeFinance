@@ -59,4 +59,12 @@ describe('DashboardComponent', () => {
     const { el } = await render();
     expect(el.querySelectorAll('[data-testid="token-row"]').length).toBe(1);
   });
+
+  it('renders the portfolio total on success', async () => {
+    wallet.status.set('success');
+    wallet.tokens.set([ETH]);
+    wallet.totalValueUsd.set(920);
+    const { el } = await render();
+    expect(el.querySelector('[data-testid="total"]')?.textContent?.trim()).toBe('$920.00');
+  });
 });

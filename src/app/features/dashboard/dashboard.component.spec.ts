@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import type { TokenItem } from '../../../../shared/token';
 import { WalletService, type WalletStatus } from '../../core/wallet.service';
 import { submitAddress } from '../../testing/submit-address';
@@ -37,6 +37,8 @@ describe('DashboardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [{ provide: WalletService, useClass: FakeWalletService }],
+      // O gráfico fica no placeholder: o ApexCharts real não roda em jsdom.
+      deferBlockBehavior: DeferBlockBehavior.Manual,
     }).compileComponents();
     wallet = TestBed.inject(WalletService) as unknown as FakeWalletService;
   });
@@ -66,5 +68,12 @@ describe('DashboardComponent', () => {
     wallet.totalValueUsd.set(920);
     const { el } = await render();
     expect(el.querySelector('[data-testid="total"]')?.textContent?.trim()).toBe('$920.00');
+  });
+
+  it('reserves the chart slot on success while the chart chunk loads', async () => {
+    wallet.status.set('success');
+    wallet.tokens.set([ETH]);
+    const { el } = await render();
+    expect(el.querySelector('[data-testid="chart-placeholder"]')).not.toBeNull();
   });
 });

@@ -18,6 +18,13 @@
     <section class="results">
       <div class="overview">
         <app-portfolio-summary class="card" [totalValueUsd]="wallet.totalValueUsd()" />
+        <div class="card chart-card">
+          @defer (on idle) {
+            <app-portfolio-chart [tokens]="wallet.tokens()" />
+          } @placeholder {
+            <div class="chart-placeholder" data-testid="chart-placeholder"></div>
+          }
+        </div>
       </div>
       <app-token-list class="card" [tokens]="wallet.tokens()" />
     </section>

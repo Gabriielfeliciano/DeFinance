@@ -95,15 +95,15 @@
 }
 
 .chain--ethereum {
-  color: #a5b4fc;
+  color: var(--chain-ethereum);
 }
 
 .chain--arbitrum {
-  color: #7dd3fc;
+  color: var(--chain-arbitrum);
 }
 
 .chain--base {
-  color: #93c5fd;
+  color: var(--chain-base);
 }
 
 .col-amount,

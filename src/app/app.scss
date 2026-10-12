@@ -1,5 +1,12 @@
 .app-shell {
+  position: relative;
   max-width: 1040px;
   margin: 0 auto;
   padding: 56px 16px 72px;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }

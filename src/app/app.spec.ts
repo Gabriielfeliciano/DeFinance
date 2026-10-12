@@ -17,4 +17,11 @@ describe('App', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('main.app-shell app-dashboard')).not.toBeNull();
   });
+
+  it('offers the theme toggle in the shell', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('main.app-shell app-theme-toggle button')).not.toBeNull();
+  });
 });

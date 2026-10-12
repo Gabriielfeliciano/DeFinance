@@ -45,3 +45,61 @@
 .chart-placeholder {
   min-height: 320px;
 }
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid rgb(248 113 113 / 0.4);
+  border-radius: var(--radius);
+  background: rgb(248 113 113 / 0.08);
+  color: var(--danger);
+}
+
+.retry {
+  padding: 8px 16px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(248 113 113 / 0.12);
+  }
+}
+
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.empty-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.empty-text {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.skeleton--summary {
+  min-height: 140px;
+}
+
+.skeleton--chart {
+  min-height: 320px;
+}
+
+.skeleton-list {
+  display: grid;
+  gap: 12px;
+}
+
+.skeleton--row {
+  height: 48px;
+  border-radius: 10px;
+}

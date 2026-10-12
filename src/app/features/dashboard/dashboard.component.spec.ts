@@ -76,4 +76,35 @@ describe('DashboardComponent', () => {
     const { el } = await render();
     expect(el.querySelector('[data-testid="chart-placeholder"]')).not.toBeNull();
   });
+
+  it('explains the read-only promise while idle', async () => {
+    const { el } = await render();
+    expect(el.querySelector('[data-testid="idle"]')?.textContent).toContain('Somente leitura');
+  });
+
+  it('shows a skeleton and locks the input while loading', async () => {
+    wallet.status.set('loading');
+    const { el } = await render();
+    const loading = el.querySelector('[data-testid="loading"]');
+    expect(loading?.getAttribute('aria-busy')).toBe('true');
+    expect(loading?.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
+    expect(el.querySelector<HTMLInputElement>('input#wallet-address')!.disabled).toBe(true);
+  });
+
+  it('shows an error banner whose button retries', async () => {
+    wallet.status.set('error');
+    const { el } = await render();
+    const banner = el.querySelector('[data-testid="error"]');
+    expect(banner?.getAttribute('role')).toBe('alert');
+    banner!.querySelector<HTMLButtonElement>('button')!.click();
+    expect(wallet.retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a friendly message for a wallet without priced tokens', async () => {
+    wallet.status.set('empty');
+    const { el } = await render();
+    expect(el.querySelector('[data-testid="empty"]')?.textContent).toContain(
+      'Nenhum ativo com valor de mercado encontrado',
+    );
+  });
 });

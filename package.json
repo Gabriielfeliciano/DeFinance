@@ -7,7 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:node": "vitest run --config vitest.node.config.ts",
+    "test:node": "vitest run --config vitest.node.config.mts",
     "typecheck:server": "tsc -p tsconfig.server.json"
   },
   "private": true,

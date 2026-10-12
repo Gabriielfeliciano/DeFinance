@@ -1,18 +1,37 @@
 <header class="hero">
   <h1 class="brand">DeFinance</h1>
   <p class="tagline">Cole o endereço público de uma carteira para ver seus ativos em Ethereum, Arbitrum e Base.</p>
-  <app-wallet-input (addressSubmit)="onAddress($event)" />
+  <app-wallet-input [disabled]="wallet.status() === 'loading'" (addressSubmit)="onAddress($event)" />
 </header>
 
 @switch (wallet.status()) {
+  @case ('idle') {
+    <p class="hint" data-testid="idle">Somente leitura: nunca pedimos chave privada nem conexão de carteira.</p>
+  }
   @case ('loading') {
-    <p class="hint" data-testid="loading">Carregando carteira…</p>
+    <section class="results" aria-busy="true" aria-label="Carregando carteira" data-testid="loading">
+      <div class="overview">
+        <div class="card skeleton skeleton--summary"></div>
+        <div class="card skeleton skeleton--chart"></div>
+      </div>
+      <div class="card skeleton-list">
+        @for (row of skeletonRows; track row) {
+          <div class="skeleton skeleton--row"></div>
+        }
+      </div>
+    </section>
   }
   @case ('error') {
-    <p class="hint" data-testid="error">Não foi possível carregar a carteira.</p>
+    <div class="banner" role="alert" data-testid="error">
+      <span>Não foi possível carregar a carteira. Verifique sua conexão e tente de novo.</span>
+      <button type="button" class="retry" (click)="wallet.retry()">Tentar novamente</button>
+    </div>
   }
   @case ('empty') {
-    <p class="hint" data-testid="empty">Nenhum ativo com valor de mercado encontrado.</p>
+    <div class="card empty" data-testid="empty">
+      <p class="empty-title">Nenhum ativo com valor de mercado encontrado</p>
+      <p class="empty-text">Esta carteira não tem tokens com preço em Ethereum, Arbitrum ou Base.</p>
+    </div>
   }
   @case ('success') {
     <section class="results">

@@ -13,6 +13,7 @@ import { WalletInputComponent } from '../wallet-input/wallet-input.component';
 })
 export class DashboardComponent {
   protected readonly wallet = inject(WalletService);
+  protected readonly skeletonRows = [1, 2, 3, 4, 5];
 
   protected onAddress(address: string): void {
     this.wallet.load(address);

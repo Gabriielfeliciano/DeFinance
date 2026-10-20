@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { handleTokensRequest } from '../server/tokens-handler';
 
 export function GET(request: Request): Promise<Response> {

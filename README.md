@@ -12,6 +12,13 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 ```
 
+![Painel do DeFinance com o valor total, o gráfico de distribuição e a lista de tokens de uma carteira](docs/screenshots/desktop-dark.png)
+
+<p align="center">
+  <img src="docs/screenshots/desktop-light.png" alt="DeFinance no tema claro" width="68%" />
+  <img src="docs/screenshots/mobile-dark.png" alt="DeFinance no celular" width="28%" />
+</p>
+
 ---
 
 ## Funcionalidades

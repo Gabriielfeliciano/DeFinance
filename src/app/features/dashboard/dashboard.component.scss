@@ -33,6 +33,8 @@
 .results,
 .overview {
   display: grid;
+  /* minmax(0, …) impede que o gráfico (largura fixa em px) alargue a coluna além da tela */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 

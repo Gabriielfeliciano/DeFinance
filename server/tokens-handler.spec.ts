@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ChainId } from '../shared/token';
 import type { AlchemyTokensPage } from './alchemy-types';
 import { ETH_NATIVE, USDC, alchemyPage } from './__fixtures__/alchemy-tokens';
 import { CACHE_CONTROL, handleTokensRequest } from './tokens-handler';
@@ -72,6 +73,33 @@ describe('handleTokensRequest', () => {
       'ethereum:native',
     ]);
     expect(body.totalValueUsd).toBeCloseTo(921.644 * 2 + 99.98, 2);
+  });
+
+  it('fills missing logos from each chain own logo index', async () => {
+    const usdcContract = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+    const indexes: Partial<Record<ChainId, Map<string, string>>> = {
+      ethereum: new Map([[usdcContract, 'https://logos.test/eth-usdc.png']]),
+      base: new Map([[usdcContract, 'https://logos.test/base-usdc.png']]),
+    };
+    const fetchFn = fakeAlchemy({
+      'eth-mainnet': alchemyPage([USDC]),
+      'base-mainnet': alchemyPage([{ ...USDC, network: 'base-mainnet' }]),
+    });
+
+    const response = await handleTokensRequest(request(`?address=${ADDRESS}`), {
+      apiKey: API_KEY,
+      fetchFn,
+      logos: { forChain: async (chain) => indexes[chain] ?? new Map() },
+    });
+
+    const body = await response.json();
+    const logoById = Object.fromEntries(
+      body.tokens.map((t: { id: string; logoUrl?: string }) => [t.id, t.logoUrl]),
+    );
+    expect(logoById).toEqual({
+      [`ethereum:${usdcContract}`]: 'https://logos.test/eth-usdc.png',
+      [`base:${usdcContract}`]: 'https://logos.test/base-usdc.png',
+    });
   });
 
   it('trims and lowercases the address before calling Alchemy', async () => {

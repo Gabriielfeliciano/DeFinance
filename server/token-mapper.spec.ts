@@ -22,7 +22,7 @@ describe('toTokenItems', () => {
       balance: 0.2,
       priceUsd: 4608.2208671202,
     });
-    expect(eth.logoUrl).toBeUndefined();
+    expect(eth.logoUrl).toBe('/tokens/eth.svg');
     expect(eth.valueUsd).toBeCloseTo(921.644, 3);
   });
 
@@ -32,6 +32,26 @@ describe('toTokenItems', () => {
     expect(usdc.balance).toBe(100);
     expect(usdc.valueUsd).toBeCloseTo(99.98, 2);
     expect(usdc.logoUrl).toBeUndefined();
+  });
+
+  it('fills a missing ERC-20 logo from the index by lowercased contract', () => {
+    const logos = new Map([
+      ['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'https://assets.coingecko.com/usdc.png'],
+    ]);
+    const [usdc] = toTokenItems([USDC], 'ethereum', logos);
+    expect(usdc.logoUrl).toBe('https://assets.coingecko.com/usdc.png');
+  });
+
+  it('keeps the Alchemy logo over the index', () => {
+    const withLogo = {
+      ...USDC,
+      tokenMetadata: { ...USDC.tokenMetadata!, logo: 'https://static.alchemyapi.io/usdc.png' },
+    };
+    const logos = new Map([
+      ['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'https://assets.coingecko.com/usdc.png'],
+    ]);
+    const [usdc] = toTokenItems([withLogo], 'ethereum', logos);
+    expect(usdc.logoUrl).toBe('https://static.alchemyapi.io/usdc.png');
   });
 
   it('uses the given chain for id and chain field', () => {

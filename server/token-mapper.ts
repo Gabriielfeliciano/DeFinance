@@ -7,14 +7,22 @@ export const MIN_VALUE_USD = 0.01;
 /** A Alchemy devolve metadata `null` no nativo; Ethereum, Arbitrum e Base usam ETH. */
 const NATIVE_METADATA: AlchemyTokenMetadata = {
   decimals: 18,
-  logo: null,
+  /** Servido de `public/` pelo próprio app. */
+  logo: '/tokens/eth.svg',
   name: 'Ether',
   symbol: 'ETH',
 };
 
-export function toTokenItems(raw: AlchemyToken[], chain: ChainId): TokenItem[] {
+/** Contrato em minúsculas → URL do logo. Preenche o que a Alchemy não manda. */
+export type LogoIndex = ReadonlyMap<string, string>;
+
+export function toTokenItems(
+  raw: AlchemyToken[],
+  chain: ChainId,
+  logos: LogoIndex = new Map(),
+): TokenItem[] {
   return raw
-    .map((token) => toTokenItem(token, chain))
+    .map((token) => toTokenItem(token, chain, logos))
     .filter((item): item is TokenItem => item !== null);
 }
 
@@ -31,7 +39,7 @@ export function toDecimal(rawBalance: string, decimals: number): number {
   }
 }
 
-function toTokenItem(token: AlchemyToken, chain: ChainId): TokenItem | null {
+function toTokenItem(token: AlchemyToken, chain: ChainId, logos: LogoIndex): TokenItem | null {
   const meta = token.tokenAddress === null ? NATIVE_METADATA : token.tokenMetadata;
   if (token.error || !meta?.symbol || meta.decimals == null) return null;
 
@@ -43,12 +51,13 @@ function toTokenItem(token: AlchemyToken, chain: ChainId): TokenItem | null {
   const valueUsd = balance * priceUsd;
   if (!(valueUsd >= MIN_VALUE_USD)) return null;
 
+  const contract = token.tokenAddress?.toLowerCase();
   return {
-    id: `${chain}:${token.tokenAddress?.toLowerCase() ?? 'native'}`,
+    id: `${chain}:${contract ?? 'native'}`,
     chain,
     symbol: meta.symbol,
     name: meta.name ?? meta.symbol,
-    logoUrl: meta.logo ?? undefined,
+    logoUrl: meta.logo ?? (contract ? logos.get(contract) : undefined),
     balance,
     priceUsd,
     valueUsd,

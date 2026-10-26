@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
-import type { TokenItem, TokensResponse } from '../../../shared/token';
+import type { ChainId, TokenItem, TokensResponse } from '../../../shared/token';
 
 export type WalletStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
@@ -16,10 +16,13 @@ export class WalletService {
   private readonly _status = signal<WalletStatus>('idle');
   private readonly _tokens = signal<TokenItem[]>([]);
   private readonly _totalValueUsd = signal(0);
+  private readonly _failedChains = signal<ChainId[]>([]);
 
   readonly status = this._status.asReadonly();
   readonly tokens = this._tokens.asReadonly();
   readonly totalValueUsd = this._totalValueUsd.asReadonly();
+  /** Redes que o proxy não conseguiu consultar: a carteira veio sem elas. */
+  readonly failedChains = this._failedChains.asReadonly();
 
   load(address: string): void {
     this.lastAddress = address;
@@ -32,7 +35,7 @@ export class WalletService {
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
         next: (response) => {
-          this.setData(response.tokens, response.totalValueUsd);
+          this.setData(response.tokens, response.totalValueUsd, response.failedChains);
           this._status.set(response.tokens.length > 0 ? 'success' : 'empty');
         },
         error: () => {
@@ -46,8 +49,10 @@ export class WalletService {
     if (this.lastAddress) this.load(this.lastAddress);
   }
 
-  private setData(tokens: TokenItem[], totalValueUsd: number): void {
+  /** `failedChains` ausente = resposta antiga, ainda no cache da CDN: trata como completa. */
+  private setData(tokens: TokenItem[], totalValueUsd: number, failedChains: ChainId[] = []): void {
     this._tokens.set(tokens);
     this._totalValueUsd.set(totalValueUsd);
+    this._failedChains.set(failedChains);
   }
 }

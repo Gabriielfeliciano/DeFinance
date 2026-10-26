@@ -30,3 +30,14 @@ export interface AlchemyTokensPage {
   /** Presente só em falha parcial (HTTP 200). */
   error?: { message: string; partialErrors?: { network: string; message: string }[] };
 }
+
+export interface AlchemySymbolPrice {
+  symbol: string;
+  /** Vazio quando a Alchemy não conhece o símbolo. */
+  prices: AlchemyTokenPrice[];
+  error?: { message: string } | null;
+}
+
+export interface AlchemyPricesBySymbol {
+  data: AlchemySymbolPrice[];
+}

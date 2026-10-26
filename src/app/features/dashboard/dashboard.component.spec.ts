@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
-import type { TokenItem } from '../../../../shared/token';
+import type { ChainId, TokenItem } from '../../../../shared/token';
 import { WalletService, type WalletStatus } from '../../core/wallet.service';
 import { submitAddress } from '../../testing/submit-address';
 import { DashboardComponent } from './dashboard.component';
@@ -9,6 +9,7 @@ class FakeWalletService {
   readonly status = signal<WalletStatus>('idle');
   readonly tokens = signal<TokenItem[]>([]);
   readonly totalValueUsd = signal(0);
+  readonly failedChains = signal<ChainId[]>([]);
   readonly load = vi.fn<(address: string) => void>();
   readonly retry = vi.fn<() => void>();
 }
@@ -100,6 +101,35 @@ describe('DashboardComponent', () => {
     expect(wallet.retry).toHaveBeenCalledTimes(1);
   });
 
+  describe('partial failure', () => {
+    const warning = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="partial"]');
+
+    it('names the chains that failed over a partial wallet, with a retry', async () => {
+      wallet.status.set('success');
+      wallet.tokens.set([ETH]);
+      wallet.failedChains.set(['linea', 'scroll']);
+      const { el } = await render();
+      expect(warning(el)?.getAttribute('role')).toBe('status');
+      expect(warning(el)?.textContent).toContain('Linea e Scroll');
+      warning(el)!.querySelector<HTMLButtonElement>('button')!.click();
+      expect(wallet.retry).toHaveBeenCalledTimes(1);
+    });
+
+    it('warns too when the chains that loaded came back empty', async () => {
+      wallet.status.set('empty');
+      wallet.failedChains.set(['arbitrum']);
+      const { el } = await render();
+      expect(warning(el)?.textContent).toContain('Arbitrum');
+    });
+
+    it('stays hidden when every chain loaded', async () => {
+      wallet.status.set('success');
+      wallet.tokens.set([ETH]);
+      const { el } = await render();
+      expect(warning(el)).toBeNull();
+    });
+  });
+
   it('shows a friendly message for a wallet without priced tokens', async () => {
     wallet.status.set('empty');
     const { el } = await render();
@@ -131,6 +161,7 @@ describe('DashboardComponent', () => {
       expect(rowCount(el)).toBe(3);
       expect(text(el, 'total')).toBe('$1,000.00');
       expect(text(el, 'summary-label')).toBe('Valor total');
+      expect(text(el, 'summary-caption')).toBe('Ativos em 2 redes');
     });
 
     it('narrows total, label and list to the chosen chain', async () => {
@@ -143,9 +174,18 @@ describe('DashboardComponent', () => {
       expect(text(el, 'summary-caption')).toBe('2 tokens nesta rede');
     });
 
-    it('disables chains where the wallet has nothing', async () => {
+    it('hides chains where the wallet has nothing', async () => {
       const { el } = await renderWallet();
-      expect(chip(el, 'base').disabled).toBe(true);
+      expect(chip(el, 'base')).toBeNull();
+    });
+
+    it('counts tokens on every supported chain', async () => {
+      const POL: TokenItem = { id: 'polygon:native', chain: 'polygon', symbol: 'POL', name: 'Polygon Ecosystem Token', balance: 100, priceUsd: 0.1, valueUsd: 10 };
+      wallet.status.set('success');
+      wallet.tokens.set([POL]);
+      const { el } = await render();
+      expect(chip(el, 'polygon')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Polygon 1');
+      expect(text(el, 'summary-caption')).toBe('Ativos em 1 rede');
     });
 
     it('goes back to every chain when another address is loaded', async () => {

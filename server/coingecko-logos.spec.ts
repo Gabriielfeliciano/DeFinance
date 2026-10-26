@@ -32,6 +32,11 @@ describe('createCoinGeckoLogos', () => {
     ['ethereum', 'https://tokens.coingecko.com/ethereum/all.json'],
     ['arbitrum', 'https://tokens.coingecko.com/arbitrum-one/all.json'],
     ['base', 'https://tokens.coingecko.com/base/all.json'],
+    ['optimism', 'https://tokens.coingecko.com/optimistic-ethereum/all.json'],
+    ['polygon', 'https://tokens.coingecko.com/polygon-pos/all.json'],
+    ['bnb', 'https://tokens.coingecko.com/binance-smart-chain/all.json'],
+    ['zora', 'https://tokens.coingecko.com/zora-network/all.json'],
+    ['hyperevm', 'https://tokens.coingecko.com/hyperevm/all.json'],
   ] as const)('requests the %s list from CoinGecko', async (chain, url) => {
     const fetchFn = fakeCoinGecko();
     await createCoinGeckoLogos({ fetchFn }).forChain(chain);

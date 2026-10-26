@@ -1,12 +1,6 @@
 import type { ChainId } from '../shared/token';
+import { CHAIN_CONFIG } from './chains';
 import type { LogoIndex } from './token-mapper';
-
-/** Slug de cada rede nas listas públicas `tokens.coingecko.com/<slug>/all.json`. */
-export const COINGECKO_PLATFORMS: Record<ChainId, string> = {
-  ethereum: 'ethereum',
-  arbitrum: 'arbitrum-one',
-  base: 'base',
-};
 
 /** Mesmo `max-age` que a CoinGecko manda nas listas. */
 export const LOGO_TTL_MS = 30 * 60_000;
@@ -76,7 +70,7 @@ async function fetchLogoIndex(
   fetchFn: typeof fetch,
   timeoutMs: number,
 ): Promise<LogoIndex> {
-  const url = `https://tokens.coingecko.com/${COINGECKO_PLATFORMS[chain]}/all.json`;
+  const url = `https://tokens.coingecko.com/${CHAIN_CONFIG[chain].coingecko}/all.json`;
   const response = await fetchFn(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 

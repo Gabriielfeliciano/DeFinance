@@ -27,6 +27,12 @@ const tokens: TokenItem[] = [
   token('base', 'native', 'ETH', 'Ethereum', 0.35, 3512.4, `${LOGO}/279/small/ethereum.png`),
   token('base', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 'USD Coin', 1200, 0.9998, `${LOGO}/6319/small/usdc.png`),
   token('base', '0x940181a94a35a4569e4529a3cdfb74e38fd98631', 'AERO', 'Aerodrome', 400, 1.12, `${LOGO}/31745/small/token.png`),
+  token('optimism', 'native', 'ETH', 'Ether', 0.18, 3512.4, '/tokens/eth.svg'),
+  token('optimism', '0x4200000000000000000000000000000000000042', 'OP', 'Optimism', 640, 1.74, `${LOGO}/25244/small/Optimism.png`),
+  token('polygon', 'native', 'POL', 'Polygon Ecosystem Token', 2100, 0.23, `${LOGO}/32440/small/pol.png`),
+  token('bnb', 'native', 'BNB', 'BNB', 0.9, 598.3, `${LOGO}/825/small/bnb-icon2_2x.png`),
+  token('avalanche', 'native', 'AVAX', 'Avalanche', 14, 27.6, `${LOGO}/12559/small/Avalanche_Circle_RedWhite_Trans.png`),
+  token('hyperevm', 'native', 'HYPE', 'Hyperliquid', 22, 31.5, `${LOGO}/50882/small/hyperliquid.jpg`),
   // Sem logo de propósito: mostra o fallback de iniciais.
   token('base', '0x4ed4e862860bed51a9570b96d89af5e1b0efefed', 'DEGEN', 'Degen', 52_000, 0.0081),
 ];
@@ -35,4 +41,5 @@ const tokens: TokenItem[] = [
 export const MOCK_PORTFOLIO: TokensResponse = {
   tokens,
   totalValueUsd: tokens.reduce((total, item) => total + item.valueUsd, 0),
+  failedChains: [],
 };

@@ -26,6 +26,41 @@ describe('toTokenItems', () => {
     expect(eth.valueUsd).toBeCloseTo(921.644, 3);
   });
 
+  it('maps the native token of an ETH L2 as ETH', () => {
+    const [eth] = toTokenItems([{ ...ETH_NATIVE, network: 'zora-mainnet' }], 'zora');
+    expect(eth).toMatchObject({ id: 'zora:native', symbol: 'ETH', logoUrl: '/tokens/eth.svg' });
+  });
+
+  it.each([
+    ['polygon', 'POL', 'Polygon Ecosystem Token'],
+    ['bnb', 'BNB', 'BNB'],
+    ['avalanche', 'AVAX', 'Avalanche'],
+    ['berachain', 'BERA', 'Berachain'],
+    ['monad', 'MON', 'Monad'],
+    ['hyperevm', 'HYPE', 'Hyperliquid'],
+  ] as const)('maps the %s native token as %s', (chain, symbol, name) => {
+    const [native] = toTokenItems([ETH_NATIVE], chain);
+    expect(native).toMatchObject({ id: `${chain}:native`, symbol, name });
+    expect(native.logoUrl).toMatch(
+      /^https:\/\/coin-images\.coingecko\.com\/coins\/images\/\d+\/small\//,
+    );
+  });
+
+  it('prices a native token with the fallback when Alchemy sends no price', () => {
+    const [eth] = toTokenItems([{ ...ETH_NATIVE, tokenPrices: [] }], 'unichain', new Map(), 2500);
+    expect(eth.priceUsd).toBe(2500);
+    expect(eth.valueUsd).toBeCloseTo(500, 6);
+  });
+
+  it('keeps the Alchemy native price over the fallback', () => {
+    const [eth] = toTokenItems([ETH_NATIVE], 'ethereum', new Map(), 2500);
+    expect(eth.priceUsd).toBe(4608.2208671202);
+  });
+
+  it('never uses the native fallback price for an ERC-20 token', () => {
+    expect(toTokenItems([{ ...USDC, tokenPrices: [] }], 'ethereum', new Map(), 2500)).toEqual([]);
+  });
+
   it('maps an ERC-20 token with a lowercased contract id and no logo', () => {
     const [usdc] = toTokenItems([USDC], 'ethereum');
     expect(usdc.id).toBe('ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
@@ -94,6 +129,14 @@ describe('buildPortfolio', () => {
   });
 
   it('returns zero for an empty wallet', () => {
-    expect(buildPortfolio([] as TokenItem[])).toEqual({ tokens: [], totalValueUsd: 0 });
+    expect(buildPortfolio([] as TokenItem[])).toEqual({
+      tokens: [],
+      totalValueUsd: 0,
+      failedChains: [],
+    });
+  });
+
+  it('carries the chains that failed', () => {
+    expect(buildPortfolio([], ['arbitrum', 'linea']).failedChains).toEqual(['arbitrum', 'linea']);
   });
 });

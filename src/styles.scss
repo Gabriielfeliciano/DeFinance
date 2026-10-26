@@ -8,6 +8,7 @@
   --accent: #7c5cff;
   --accent-strong: #6a46ff;
   --danger: #f87171;
+  --warning: #fbbf24;
   --radius: 16px;
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --glow-1: rgb(124 92 255 / 0.18);
@@ -15,6 +16,19 @@
   --chain-ethereum: #a5b4fc;
   --chain-arbitrum: #7dd3fc;
   --chain-base: #93c5fd;
+  --chain-optimism: #fca5a5;
+  --chain-polygon: #c4b5fd;
+  --chain-bnb: #fde047;
+  --chain-avalanche: #fda4af;
+  --chain-zksync: #cbd5e1;
+  --chain-linea: #67e8f9;
+  --chain-scroll: #fcd34d;
+  --chain-berachain: #fdba74;
+  --chain-zora: #f0abfc;
+  --chain-unichain: #f9a8d4;
+  --chain-shape: #d6d3d1;
+  --chain-monad: #d8b4fe;
+  --chain-hyperevm: #5eead4;
   color-scheme: dark;
 }
 
@@ -28,11 +42,25 @@
   --accent: #6a46ff;
   --accent-strong: #5532f0;
   --danger: #dc2626;
+  --warning: #b45309;
   --glow-1: rgb(124 92 255 / 0.1);
   --glow-2: rgb(45 212 191 / 0.08);
   --chain-ethereum: #4f46e5;
   --chain-arbitrum: #0284c7;
   --chain-base: #2563eb;
+  --chain-optimism: #dc2626;
+  --chain-polygon: #7c3aed;
+  --chain-bnb: #a16207;
+  --chain-avalanche: #be123c;
+  --chain-zksync: #475569;
+  --chain-linea: #0e7490;
+  --chain-scroll: #b45309;
+  --chain-berachain: #c2410c;
+  --chain-zora: #a21caf;
+  --chain-unichain: #be185d;
+  --chain-shape: #57534e;
+  --chain-monad: #9333ea;
+  --chain-hyperevm: #0f766e;
   color-scheme: light;
 }
 

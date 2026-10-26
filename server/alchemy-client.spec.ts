@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ETH_NATIVE, USDC, alchemyPage } from './__fixtures__/alchemy-tokens';
-import { AlchemyError, MAX_PAGES, fetchChainTokens } from './alchemy-client';
+import { ETH_NATIVE, PRICES_BY_SYMBOL, USDC, alchemyPage } from './__fixtures__/alchemy-tokens';
+import { AlchemyError, MAX_PAGES, fetchChainTokens, fetchPricesBySymbol } from './alchemy-client';
 
 const ADDRESS = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 const API_KEY = 'secret-key';
@@ -33,6 +33,22 @@ describe('fetchChainTokens', () => {
       includeNativeTokens: true,
       includeErc20Tokens: true,
     });
+  });
+
+  it.each([
+    ['ethereum', 'eth-mainnet'],
+    ['optimism', 'opt-mainnet'],
+    ['polygon', 'polygon-mainnet'],
+    ['bnb', 'bnb-mainnet'],
+    ['avalanche', 'avax-mainnet'],
+    ['zora', 'zora-mainnet'],
+    ['hyperevm', 'hyperliquid-mainnet'],
+  ] as const)('asks Alchemy for %s as %s', async (chain, network) => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse(alchemyPage([])));
+
+    await fetchChainTokens(ADDRESS, chain, API_KEY, fetchFn);
+
+    expect(requestBody(fetchFn, 0).addresses[0].networks).toEqual([network]);
   });
 
   it('follows pageKey until the last page', async () => {
@@ -87,6 +103,41 @@ describe('fetchChainTokens', () => {
     const error = await fetchChainTokens(ADDRESS, 'base', API_KEY, fetchFn).catch(
       (e: unknown) => e,
     );
+
+    expect(error).toBeInstanceOf(AlchemyError);
+    expect((error as Error).message).not.toContain(API_KEY);
+  });
+});
+
+describe('fetchPricesBySymbol', () => {
+  it('GETs the Prices By Symbol endpoint and returns USD prices by symbol', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse(PRICES_BY_SYMBOL));
+
+    const prices = await fetchPricesBySymbol(['ETH', 'MON'], API_KEY, fetchFn);
+
+    expect(fetchFn.mock.calls[0][0]).toBe(
+      `https://api.g.alchemy.com/prices/v1/${API_KEY}/tokens/by-symbol?symbols=ETH&symbols=MON`,
+    );
+    expect(prices).toEqual(
+      new Map([
+        ['ETH', 2322.04],
+        ['MON', 0.021938],
+      ]),
+    );
+  });
+
+  it('leaves out symbols Alchemy could not price', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse(PRICES_BY_SYMBOL));
+
+    const prices = await fetchPricesBySymbol(['ETH', 'MON', 'NOPE'], API_KEY, fetchFn);
+
+    expect(prices.has('NOPE')).toBe(false);
+  });
+
+  it('throws AlchemyError without the API key on a non-2xx response', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse({}, 503));
+
+    const error = await fetchPricesBySymbol(['ETH'], API_KEY, fetchFn).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AlchemyError);
     expect((error as Error).message).not.toContain(API_KEY);

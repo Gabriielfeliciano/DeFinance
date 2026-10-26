@@ -49,7 +49,7 @@ describe('WalletService', () => {
 
   it('exposes tokens and total on success', () => {
     service.load(ADDRESS_A);
-    expectTokensRequest(ADDRESS_A).flush({ tokens: [ETH], totalValueUsd: 920 } satisfies TokensResponse);
+    expectTokensRequest(ADDRESS_A).flush({ tokens: [ETH], totalValueUsd: 920, failedChains: [] } satisfies TokensResponse);
     expect(service.status()).toBe('success');
     expect(service.tokens()).toEqual([ETH]);
     expect(service.totalValueUsd()).toBe(920);
@@ -57,8 +57,37 @@ describe('WalletService', () => {
 
   it('reports empty when the wallet has no priced tokens', () => {
     service.load(ADDRESS_A);
-    expectTokensRequest(ADDRESS_A).flush({ tokens: [], totalValueUsd: 0 } satisfies TokensResponse);
+    expectTokensRequest(ADDRESS_A).flush({ tokens: [], totalValueUsd: 0, failedChains: [] } satisfies TokensResponse);
     expect(service.status()).toBe('empty');
+  });
+
+  it('exposes the chains that failed alongside a partial wallet', () => {
+    service.load(ADDRESS_A);
+    expectTokensRequest(ADDRESS_A).flush({
+      tokens: [ETH],
+      totalValueUsd: 920,
+      failedChains: ['arbitrum', 'linea'],
+    } satisfies TokensResponse);
+    expect(service.status()).toBe('success');
+    expect(service.failedChains()).toEqual(['arbitrum', 'linea']);
+  });
+
+  it('treats a response cached before failedChains existed as complete', () => {
+    service.load(ADDRESS_A);
+    expectTokensRequest(ADDRESS_A).flush({ tokens: [ETH], totalValueUsd: 920 });
+    expect(service.failedChains()).toEqual([]);
+  });
+
+  it('forgets the failed chains as soon as another load starts', () => {
+    service.load(ADDRESS_A);
+    expectTokensRequest(ADDRESS_A).flush({
+      tokens: [ETH],
+      totalValueUsd: 920,
+      failedChains: ['linea'],
+    } satisfies TokensResponse);
+    service.load(ADDRESS_B);
+    expect(service.failedChains()).toEqual([]);
+    expectTokensRequest(ADDRESS_B);
   });
 
   it('reports error and clears data when the proxy fails', () => {
@@ -74,7 +103,7 @@ describe('WalletService', () => {
     expectTokensRequest(ADDRESS_A).flush({ error: 'Falha' }, { status: 502, statusText: 'Bad Gateway' });
     service.retry();
     expect(service.status()).toBe('loading');
-    expectTokensRequest(ADDRESS_A).flush({ tokens: [ETH], totalValueUsd: 920 } satisfies TokensResponse);
+    expectTokensRequest(ADDRESS_A).flush({ tokens: [ETH], totalValueUsd: 920, failedChains: [] } satisfies TokensResponse);
     expect(service.status()).toBe('success');
   });
 
@@ -90,7 +119,7 @@ describe('WalletService', () => {
     const second = expectTokensRequest(ADDRESS_B);
 
     expect(first.cancelled).toBe(true);
-    second.flush({ tokens: [ETH], totalValueUsd: 920 } satisfies TokensResponse);
+    second.flush({ tokens: [ETH], totalValueUsd: 920, failedChains: [] } satisfies TokensResponse);
     expect(service.status()).toBe('success');
     expect(service.tokens()).toEqual([ETH]);
   });

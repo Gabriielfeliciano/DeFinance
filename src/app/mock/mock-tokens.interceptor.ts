@@ -8,6 +8,8 @@ export const MOCK_LATENCY_MS = 900;
 export const MOCK_EMPTY_ADDRESS = '0x0000000000000000000000000000000000000000';
 /** Endereço que simula falha do proxy (502). */
 export const MOCK_ERROR_ADDRESS = '0x000000000000000000000000000000000000dead';
+/** Endereço que simula Linea e Scroll fora do ar (resposta parcial). */
+export const MOCK_PARTIAL_ADDRESS = '0x00000000000000000000000000000000000beef0';
 
 /** Responde `/api/tokens` com dados falsos. Só entra no build pela configuração `mock`. */
 export const mockTokensInterceptor: HttpInterceptorFn = (req, next) => {
@@ -22,6 +24,11 @@ export const mockTokensInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
 
-  const body: TokensResponse = address === MOCK_EMPTY_ADDRESS ? { tokens: [], totalValueUsd: 0 } : MOCK_PORTFOLIO;
+  const body: TokensResponse =
+    address === MOCK_EMPTY_ADDRESS
+      ? { tokens: [], totalValueUsd: 0, failedChains: [] }
+      : address === MOCK_PARTIAL_ADDRESS
+        ? { ...MOCK_PORTFOLIO, failedChains: ['linea', 'scroll'] }
+        : MOCK_PORTFOLIO;
   return of(new HttpResponse({ status: 200, url: req.url, body })).pipe(delay(MOCK_LATENCY_MS));
 };

@@ -7,6 +7,7 @@ import {
   MOCK_EMPTY_ADDRESS,
   MOCK_ERROR_ADDRESS,
   MOCK_LATENCY_MS,
+  MOCK_PARTIAL_ADDRESS,
   mockTokensInterceptor,
 } from './mock-tokens.interceptor';
 
@@ -49,13 +50,20 @@ describe('mockTokensInterceptor', () => {
   it('answers an empty wallet for the zero address', () => {
     const result = getTokens(MOCK_EMPTY_ADDRESS);
     vi.advanceTimersByTime(MOCK_LATENCY_MS);
-    expect(result.body).toEqual({ tokens: [], totalValueUsd: 0 });
+    expect(result.body).toEqual({ tokens: [], totalValueUsd: 0, failedChains: [] });
   });
 
   it('fails with 502 for the error demo address, in any letter case', () => {
     const result = getTokens(MOCK_ERROR_ADDRESS.toUpperCase().replace('0X', '0x'));
     vi.advanceTimersByTime(MOCK_LATENCY_MS);
     expect(result.error?.status).toBe(502);
+  });
+
+  it('answers the sample portfolio with two failed chains for the partial demo address', () => {
+    const result = getTokens(MOCK_PARTIAL_ADDRESS);
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(result.body?.tokens).toEqual(MOCK_PORTFOLIO.tokens);
+    expect(result.body?.failedChains).toEqual(['linea', 'scroll']);
   });
 
   it('lets every other request through to the real backend', () => {
@@ -70,10 +78,9 @@ describe('MOCK_PORTFOLIO', () => {
     expect(MOCK_PORTFOLIO.totalValueUsd).toBeCloseTo(sum, 6);
   });
 
-  it('covers all three chains and enough assets to group "Outros" in the chart', () => {
-    expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.chain))).toEqual(
-      new Set(['ethereum', 'arbitrum', 'base']),
-    );
+  it('spreads over more chains than fit a short filter, with enough assets to group "Outros"', () => {
+    expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.chain)).size).toBeGreaterThanOrEqual(6);
+    expect(MOCK_PORTFOLIO.failedChains).toEqual([]);
     expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.symbol)).size).toBeGreaterThan(7);
   });
 });

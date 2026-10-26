@@ -1,33 +1,34 @@
 import type { ChainId, TokenItem, TokensResponse } from '../shared/token';
 import type { AlchemyToken, AlchemyTokenMetadata } from './alchemy-types';
+import { CHAIN_CONFIG } from './chains';
 
 /** Abaixo disso o token é poeira: some da lista e do gráfico. */
 export const MIN_VALUE_USD = 0.01;
 
-/** A Alchemy devolve metadata `null` no nativo; Ethereum, Arbitrum e Base usam ETH. */
-const NATIVE_METADATA: AlchemyTokenMetadata = {
-  decimals: 18,
-  /** Servido de `public/` pelo próprio app. */
-  logo: '/tokens/eth.svg',
-  name: 'Ether',
-  symbol: 'ETH',
-};
-
 /** Contrato em minúsculas → URL do logo. Preenche o que a Alchemy não manda. */
 export type LogoIndex = ReadonlyMap<string, string>;
 
+/**
+ * `nativePriceUsd` vale só para o token nativo e só quando a Alchemy não manda
+ * o preço dele (acontece em Zora, Unichain, Shape, Monad e HyperEVM).
+ */
 export function toTokenItems(
   raw: AlchemyToken[],
   chain: ChainId,
   logos: LogoIndex = new Map(),
+  nativePriceUsd?: number,
 ): TokenItem[] {
   return raw
-    .map((token) => toTokenItem(token, chain, logos))
+    .map((token) => toTokenItem(token, chain, logos, nativePriceUsd))
     .filter((item): item is TokenItem => item !== null);
 }
 
-export function buildPortfolio(tokens: TokenItem[]): TokensResponse {
-  return { tokens, totalValueUsd: tokens.reduce((sum, token) => sum + token.valueUsd, 0) };
+export function buildPortfolio(tokens: TokenItem[], failedChains: ChainId[] = []): TokensResponse {
+  return {
+    tokens,
+    totalValueUsd: tokens.reduce((sum, token) => sum + token.valueUsd, 0),
+    failedChains,
+  };
 }
 
 /** Converte um saldo inteiro (hex `0x…` ou decimal) para unidades do token. */
@@ -39,12 +40,29 @@ export function toDecimal(rawBalance: string, decimals: number): number {
   }
 }
 
-function toTokenItem(token: AlchemyToken, chain: ChainId, logos: LogoIndex): TokenItem | null {
-  const meta = token.tokenAddress === null ? NATIVE_METADATA : token.tokenMetadata;
+/** Preço em USD que a Alchemy mandou, ou `NaN`. */
+export function alchemyUsdPrice(token: AlchemyToken): number {
+  const usd = token.tokenPrices?.find((price) => price.currency.toLowerCase() === 'usd');
+  return Number(usd?.value);
+}
+
+/** A Alchemy devolve metadata `null` no nativo: vem do cadastro da rede. */
+function nativeMetadata(chain: ChainId): AlchemyTokenMetadata {
+  return { decimals: 18, ...CHAIN_CONFIG[chain].native };
+}
+
+function toTokenItem(
+  token: AlchemyToken,
+  chain: ChainId,
+  logos: LogoIndex,
+  nativePriceUsd: number | undefined,
+): TokenItem | null {
+  const isNative = token.tokenAddress === null;
+  const meta = isNative ? nativeMetadata(chain) : token.tokenMetadata;
   if (token.error || !meta?.symbol || meta.decimals == null) return null;
 
-  const usd = token.tokenPrices?.find((price) => price.currency.toLowerCase() === 'usd');
-  const priceUsd = Number(usd?.value);
+  let priceUsd = alchemyUsdPrice(token);
+  if (isNative && !(priceUsd > 0) && nativePriceUsd !== undefined) priceUsd = nativePriceUsd;
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) return null;
 
   const balance = toDecimal(token.tokenBalance, meta.decimals);

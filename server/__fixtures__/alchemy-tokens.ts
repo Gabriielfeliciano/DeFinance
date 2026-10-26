@@ -1,4 +1,4 @@
-import type { AlchemyToken, AlchemyTokensPage } from '../alchemy-types';
+import type { AlchemyPricesBySymbol, AlchemyToken, AlchemyTokensPage } from '../alchemy-types';
 
 const WALLET = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 const PRICED_AT = '2025-08-26T20:17:27Z';
@@ -74,3 +74,18 @@ export const NO_METADATA: AlchemyToken = {
 export function alchemyPage(tokens: AlchemyToken[], pageKey?: string): AlchemyTokensPage {
   return { data: { tokens, pageKey: pageKey ?? null } };
 }
+
+/** Shape real do Prices By Symbol, inclusive o símbolo sem preço. */
+export const PRICES_BY_SYMBOL: AlchemyPricesBySymbol = {
+  data: [
+    {
+      symbol: 'ETH',
+      prices: [{ currency: 'usd', value: '2322.04', lastUpdatedAt: '2026-10-26T17:03:08.960Z' }],
+    },
+    {
+      symbol: 'MON',
+      prices: [{ currency: 'usd', value: '0.021938', lastUpdatedAt: '2026-10-26T17:03:08.672Z' }],
+    },
+    { symbol: 'NOPE', prices: [], error: { message: 'Price not found for symbol: NOPE' } },
+  ],
+};

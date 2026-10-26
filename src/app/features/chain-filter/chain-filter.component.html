@@ -9,17 +9,16 @@
   >
     Todas <span class="count">{{ total() }}</span>
   </button>
-  @for (chain of chains; track chain) {
+  @for (chain of chains(); track chain) {
     <button
       type="button"
       class="chip"
       [attr.data-testid]="'chip-' + chain"
       [class.chip--active]="selected() === chain"
       [attr.aria-pressed]="selected() === chain"
-      [disabled]="!counts()[chain]"
       (click)="selectedChange.emit(chain)"
     >
-      <span class="dot dot--{{ chain }}" aria-hidden="true"></span>
+      <span class="dot" [style.background]="'var(--chain-' + chain + ')'" aria-hidden="true"></span>
       {{ labels[chain] }} <span class="count">{{ counts()[chain] }}</span>
     </button>
   }

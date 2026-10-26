@@ -24,7 +24,7 @@
       <div class="identity">
         <span class="symbol" data-testid="symbol">{{ token.symbol }}</span>
         <span class="meta">
-          <span class="chain chain--{{ token.chain }}" data-testid="chain">{{ chainLabels[token.chain] }}</span>
+          <span class="chain" [style.color]="'var(--chain-' + token.chain + ')'" data-testid="chain">{{ chainLabels[token.chain] }}</span>
           <span class="name">{{ token.name }}</span>
         </span>
       </div>

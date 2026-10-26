@@ -1,8 +1,15 @@
 <header class="hero">
   <h1 class="brand">DeFinance</h1>
-  <p class="tagline">Cole o endereço público de uma carteira para ver seus ativos em Ethereum, Arbitrum e Base.</p>
+  <p class="tagline">Cole o endereço público de uma carteira para ver seus ativos em {{ chainCount }} redes EVM: Ethereum, Arbitrum, Base, Polygon e outras.</p>
   <app-wallet-input [disabled]="wallet.status() === 'loading'" (addressSubmit)="onAddress($event)" />
 </header>
+
+@if (wallet.failedChains().length > 0) {
+  <div class="banner banner--warning" role="status" data-testid="partial">
+    <span>Não foi possível carregar {{ failedChainNames() }} agora. O total pode estar incompleto.</span>
+    <button type="button" class="retry" (click)="wallet.retry()">Tentar novamente</button>
+  </div>
+}
 
 @switch (wallet.status()) {
   @case ('idle') {
@@ -30,7 +37,7 @@
   @case ('empty') {
     <div class="card empty" data-testid="empty">
       <p class="empty-title">Nenhum ativo com valor de mercado encontrado</p>
-      <p class="empty-text">Esta carteira não tem tokens com preço em Ethereum, Arbitrum ou Base.</p>
+      <p class="empty-text">Esta carteira não tem tokens com preço em nenhuma das {{ chainCount }} redes suportadas.</p>
     </div>
   }
   @case ('success') {

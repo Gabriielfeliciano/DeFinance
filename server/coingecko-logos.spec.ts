@@ -37,6 +37,7 @@ describe('createCoinGeckoLogos', () => {
     ['bnb', 'https://tokens.coingecko.com/binance-smart-chain/all.json'],
     ['zora', 'https://tokens.coingecko.com/zora-network/all.json'],
     ['hyperevm', 'https://tokens.coingecko.com/hyperevm/all.json'],
+    ['robinhood', 'https://tokens.coingecko.com/robinhood/all.json'],
   ] as const)('requests the %s list from CoinGecko', async (chain, url) => {
     const fetchFn = fakeCoinGecko();
     await createCoinGeckoLogos({ fetchFn }).forChain(chain);

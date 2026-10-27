@@ -21,11 +21,12 @@ describe('ChainFilterComponent', () => {
   }
 
   it('shows "Todas" plus one chip per chain that has tokens, each with its count', async () => {
-    await render('all', { ethereum: 6, polygon: 3, hyperevm: 4 });
-    expect(chipText('all')).toBe('Todas 13');
+    await render('all', { ethereum: 6, polygon: 3, hyperevm: 4, robinhood: 2 });
+    expect(chipText('all')).toBe('Todas 15');
     expect(chipText('ethereum')).toBe('Ethereum 6');
     expect(chipText('polygon')).toBe('Polygon 3');
     expect(chipText('hyperevm')).toBe('HyperEVM 4');
+    expect(chipText('robinhood')).toBe('Robinhood Chain 2');
   });
 
   it('hides chains where the wallet has no tokens', async () => {

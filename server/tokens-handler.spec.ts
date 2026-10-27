@@ -28,7 +28,7 @@ function fakeAlchemy(
   });
 }
 
-/** Nativo como a Alchemy manda em Zora, Unichain, Shape, Monad e HyperEVM: sem preço. */
+/** Nativo como a Alchemy manda em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain: sem preço. */
 function unpricedNative(network: string, tokenBalance = ETH_NATIVE.tokenBalance): AlchemyToken {
   return { ...ETH_NATIVE, network, tokenBalance, tokenPrices: [] };
 }
@@ -66,7 +66,7 @@ describe('handleTokensRequest', () => {
     expect(response.status).toBe(500);
   });
 
-  it('aggregates all 16 chains into one cached response', async () => {
+  it('aggregates all 17 chains into one cached response', async () => {
     const fetchFn = fakeAlchemy({
       'eth-mainnet': alchemyPage([ETH_NATIVE, USDC]),
       'base-mainnet': alchemyPage([{ ...ETH_NATIVE, network: 'base-mainnet' }]),
@@ -81,7 +81,7 @@ describe('handleTokensRequest', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe(CACHE_CONTROL);
     const body = await response.json();
-    expect(fetchFn).toHaveBeenCalledTimes(16);
+    expect(fetchFn).toHaveBeenCalledTimes(17);
     expect(body.tokens.map((t: { id: string }) => t.id).sort()).toEqual([
       'base:native',
       'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',

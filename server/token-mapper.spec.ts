@@ -26,9 +26,12 @@ describe('toTokenItems', () => {
     expect(eth.valueUsd).toBeCloseTo(921.644, 3);
   });
 
-  it('maps the native token of an ETH L2 as ETH', () => {
-    const [eth] = toTokenItems([{ ...ETH_NATIVE, network: 'zora-mainnet' }], 'zora');
-    expect(eth).toMatchObject({ id: 'zora:native', symbol: 'ETH', logoUrl: '/tokens/eth.svg' });
+  it.each([
+    ['zora', 'zora-mainnet'],
+    ['robinhood', 'robinhood-mainnet'],
+  ] as const)('maps the native token of the %s L2 as ETH', (chain, network) => {
+    const [eth] = toTokenItems([{ ...ETH_NATIVE, network }], chain);
+    expect(eth).toMatchObject({ id: `${chain}:native`, symbol: 'ETH', logoUrl: '/tokens/eth.svg' });
   });
 
   it.each([

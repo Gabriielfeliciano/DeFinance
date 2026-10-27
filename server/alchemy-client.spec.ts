@@ -43,6 +43,7 @@ describe('fetchChainTokens', () => {
     ['avalanche', 'avax-mainnet'],
     ['zora', 'zora-mainnet'],
     ['hyperevm', 'hyperliquid-mainnet'],
+    ['robinhood', 'robinhood-mainnet'],
   ] as const)('asks Alchemy for %s as %s', async (chain, network) => {
     const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse(alchemyPage([])));
 

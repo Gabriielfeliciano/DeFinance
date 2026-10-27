@@ -10,7 +10,7 @@ export type LogoIndex = ReadonlyMap<string, string>;
 
 /**
  * `nativePriceUsd` vale só para o token nativo e só quando a Alchemy não manda
- * o preço dele (acontece em Zora, Unichain, Shape, Monad e HyperEVM).
+ * o preço dele (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain).
  */
 export function toTokenItems(
   raw: AlchemyToken[],

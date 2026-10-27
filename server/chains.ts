@@ -82,4 +82,5 @@ export const CHAIN_CONFIG: Record<ChainId, ChainConfig> = {
       logo: `${COIN_IMAGES}/50882/small/hyperliquid.jpg?1729431300`,
     },
   },
+  robinhood: { alchemy: 'robinhood-mainnet', coingecko: 'robinhood', native: ETH },
 };

@@ -16,6 +16,7 @@ export const CHAINS = [
   'shape',
   'monad',
   'hyperevm',
+  'robinhood',
 ] as const;
 
 export type ChainId = (typeof CHAINS)[number];
@@ -37,6 +38,7 @@ export const CHAIN_LABELS: Record<ChainId, string> = {
   shape: 'Shape',
   monad: 'Monad',
   hyperevm: 'HyperEVM',
+  robinhood: 'Robinhood Chain',
 };
 
 export interface TokenItem {

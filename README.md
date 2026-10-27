@@ -2,7 +2,7 @@
 
 **Veja quanto vale uma carteira cripto em segundos, sem conectar nada.**
 
-DeFinance é um painel de portfólio somente leitura para carteiras EVM. Você cola o endereço público de uma carteira e o app mostra os tokens, o valor total em dólar e a distribuição por ativo em **16 redes EVM**, de Ethereum, Arbitrum e Base a Polygon, BNB Chain e Avalanche, tudo em uma tela.
+DeFinance é um painel de portfólio somente leitura para carteiras EVM. Você cola o endereço público de uma carteira e o app mostra os tokens, o valor total em dólar e a distribuição por ativo em **17 redes EVM**, de Ethereum, Arbitrum e Base a Polygon, BNB Chain e Avalanche, tudo em uma tela.
 
 ### 👉 [Abrir a demo ao vivo](https://de-finance-psi.vercel.app)
 
@@ -23,7 +23,7 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 
 ## Funcionalidades
 
-- **Visão consolidada de 16 redes EVM:** Ethereum, Arbitrum, Base, Optimism, Polygon, BNB Chain, Avalanche, zkSync, Linea, Scroll, Berachain, Zora, Unichain, Shape, Monad e HyperEVM, consultadas em paralelo e somadas em um único resultado.
+- **Visão consolidada de 17 redes EVM:** Ethereum, Arbitrum, Base, Optimism, Polygon, BNB Chain, Avalanche, zkSync, Linea, Scroll, Berachain, Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain, consultadas em paralelo e somadas em um único resultado.
 - **Valor total em destaque**, em USD.
 - **Gráfico de distribuição:** o mesmo ativo em redes diferentes vira uma fatia só, e os ativos menores são agrupados em "Outros" para o gráfico continuar legível.
 - **Lista de tokens** com quantidade, preço unitário e valor, ordenada do maior para o menor.
@@ -45,17 +45,17 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 ```mermaid
 flowchart LR
     U["Navegador<br/>(Angular)"] -->|"GET /api/tokens?address=0x…"| F["Função serverless<br/>no Vercel"]
-    F -->|"16 consultas em paralelo"| A["Alchemy<br/>Portfolio API"]
+    F -->|"17 consultas em paralelo"| A["Alchemy<br/>Portfolio API"]
     A --- E["Ethereum"]
     A --- R["Arbitrum"]
     A --- B["Base"]
-    A --- M["+ 13 redes EVM"]
+    A --- M["+ 14 redes EVM"]
     F -.->|"preço de nativos que faltarem"| P["Alchemy<br/>Prices API"]
     F -->|"JSON limpo e consolidado"| U
 ```
 
 1. O navegador valida o endereço e chama uma única rota, `/api/tokens`.
-2. A função serverless consulta a Alchemy nas 16 redes ao mesmo tempo, percorre a paginação e remove duplicados. Quando a Alchemy não manda o preço do token nativo de uma rede (acontece em Zora, Unichain, Shape, Monad e HyperEVM), uma única chamada extra à Prices API completa.
+2. A função serverless consulta a Alchemy nas 17 redes ao mesmo tempo, percorre a paginação e remove duplicados. Quando a Alchemy não manda o preço do token nativo de uma rede (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain), uma única chamada extra à Prices API completa.
 3. A mesma função filtra spam e poeira, converte saldos e preços e soma o total.
 4. O navegador recebe uma resposta pronta para exibir. Não há cálculo pesado no front.
 
@@ -80,14 +80,14 @@ flowchart LR
 
 ## Qualidade
 
-**155 testes automatizados**, todos passando:
+**158 testes automatizados**, todos passando:
 
 - **77 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
-- **78 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
+- **81 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
 
 ## Rodando localmente
 
-**Pré-requisitos:** Node.js 24, uma conta no [Vercel](https://vercel.com) e uma chave da [Alchemy](https://dashboard.alchemy.com) com as 16 redes acima habilitadas. Rede não habilitada no app da Alchemy aparece no aviso de falha parcial.
+**Pré-requisitos:** Node.js 24, uma conta no [Vercel](https://vercel.com) e uma chave da [Alchemy](https://dashboard.alchemy.com) com as 17 redes acima habilitadas. Rede não habilitada no app da Alchemy aparece no aviso de falha parcial.
 
 ```bash
 npm install

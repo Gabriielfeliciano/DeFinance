@@ -15,7 +15,7 @@ export class ChainFilterComponent {
   readonly selectedChange = output<ChainSelection>();
 
   protected readonly labels = CHAIN_LABELS;
-  /** Só as redes com tokens: com 16 redes, chips vazios viram ruído. */
+  /** Só as redes com tokens: com 17 redes, chips vazios viram ruído. */
   protected readonly chains = computed(() => CHAINS.filter((chain) => (this.counts()[chain] ?? 0) > 0));
   protected readonly total = computed(() => this.chains().reduce((sum, chain) => sum + this.counts()[chain]!, 0));
 }

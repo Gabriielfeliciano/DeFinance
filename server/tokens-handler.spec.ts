@@ -1,7 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChainId } from '../shared/token';
-import type { AlchemyPricesBySymbol, AlchemyToken, AlchemyTokensPage } from './alchemy-types';
-import { ETH_NATIVE, PRICES_BY_SYMBOL, USDC, alchemyPage } from './__fixtures__/alchemy-tokens';
+import type {
+  AlchemyPricesByAddress,
+  AlchemyPricesBySymbol,
+  AlchemyToken,
+  AlchemyTokensPage,
+} from './alchemy-types';
+import {
+  ETH_NATIVE,
+  PRICES_BY_ADDRESS,
+  PRICES_BY_SYMBOL,
+  RH_FAKE_USDG,
+  RH_TSLA,
+  RH_TSLA_CONTRACT,
+  SPAM_NO_PRICE,
+  USDC,
+  alchemyPage,
+} from './__fixtures__/alchemy-tokens';
 import { CACHE_CONTROL, handleTokensRequest } from './tokens-handler';
 
 const ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
@@ -13,15 +28,18 @@ function request(query: string): Request {
 
 /**
  * Fake da Alchemy: Tokens By Wallet responde por rede, Prices By Symbol com
- * `prices`. Número = status HTTP de erro.
+ * `prices` e Prices By Address com `pricesByAddress`. Número = status HTTP de erro.
  */
 function fakeAlchemy(
   byNetwork: Record<string, AlchemyTokensPage | number>,
   prices: AlchemyPricesBySymbol | number = PRICES_BY_SYMBOL,
+  pricesByAddress: AlchemyPricesByAddress | number = PRICES_BY_ADDRESS,
 ) {
   return vi.fn<typeof fetch>(async (url, init) => {
     const reply = String(url).includes('/prices/v1/')
-      ? prices
+      ? String(url).includes('/tokens/by-address')
+        ? pricesByAddress
+        : prices
       : (byNetwork[JSON.parse(init!.body as string).addresses[0].networks[0]] ?? alchemyPage([]));
     if (typeof reply === 'number') return new Response('upstream error', { status: reply });
     return Response.json(reply);
@@ -135,6 +153,58 @@ describe('handleTokensRequest', () => {
         'eth-mainnet': alchemyPage([ETH_NATIVE]),
         'zora-mainnet': alchemyPage([unpricedNative('zora-mainnet')]),
       },
+      503,
+    );
+
+    const response = await handleTokensRequest(request(`?address=${ADDRESS}`), {
+      apiKey: API_KEY,
+      fetchFn,
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.tokens.map((t: { id: string }) => t.id)).toEqual(['ethereum:native']);
+    expect(body.failedChains).toEqual([]);
+    expect(JSON.stringify(warnLog.mock.calls)).not.toContain(API_KEY);
+  });
+
+  it('prices Robinhood Chain ERC-20s by contract and leaves out the ones still unpriced', async () => {
+    const fetchFn = fakeAlchemy({
+      'robinhood-mainnet': alchemyPage([RH_TSLA, RH_FAKE_USDG]),
+    });
+
+    const response = await handleTokensRequest(request(`?address=${ADDRESS}`), {
+      apiKey: API_KEY,
+      fetchFn,
+    });
+
+    const body = await response.json();
+    expect(priceCalls(fetchFn)).toEqual([
+      `https://api.g.alchemy.com/prices/v1/${API_KEY}/tokens/by-address`,
+    ]);
+    expect(body.tokens.map((t: { id: string; priceUsd: number }) => [t.id, t.priceUsd])).toEqual([
+      [`robinhood:${RH_TSLA_CONTRACT}`, 405.83440413306727],
+    ]);
+  });
+
+  it('never asks prices by contract on chains whose ERC-20s already come priced', async () => {
+    const fetchFn = fakeAlchemy({
+      'eth-mainnet': alchemyPage([USDC, SPAM_NO_PRICE]),
+    });
+
+    await handleTokensRequest(request(`?address=${ADDRESS}`), { apiKey: API_KEY, fetchFn });
+
+    expect(priceCalls(fetchFn)).toEqual([]);
+  });
+
+  it('drops unpriced Robinhood Chain ERC-20s but keeps the wallet when prices by contract fail', async () => {
+    const warnLog = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchFn = fakeAlchemy(
+      {
+        'eth-mainnet': alchemyPage([ETH_NATIVE]),
+        'robinhood-mainnet': alchemyPage([RH_TSLA]),
+      },
+      PRICES_BY_SYMBOL,
       503,
     );
 

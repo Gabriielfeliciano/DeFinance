@@ -41,3 +41,15 @@ export interface AlchemySymbolPrice {
 export interface AlchemyPricesBySymbol {
   data: AlchemySymbolPrice[];
 }
+
+export interface AlchemyAddressPrice {
+  network: string;
+  address: string;
+  /** Vazio quando a Alchemy não tem preço para o contrato (spam, por exemplo). */
+  prices: AlchemyTokenPrice[];
+  error?: { message: string } | null;
+}
+
+export interface AlchemyPricesByAddress {
+  data: AlchemyAddressPrice[];
+}

@@ -50,12 +50,12 @@ flowchart LR
     A --- R["Arbitrum"]
     A --- B["Base"]
     A --- M["+ 14 redes EVM"]
-    F -.->|"preço de nativos que faltarem"| P["Alchemy<br/>Prices API"]
+    F -.->|"preços que faltarem"| P["Alchemy<br/>Prices API"]
     F -->|"JSON limpo e consolidado"| U
 ```
 
 1. O navegador valida o endereço e chama uma única rota, `/api/tokens`.
-2. A função serverless consulta a Alchemy nas 17 redes ao mesmo tempo, percorre a paginação e remove duplicados. Quando a Alchemy não manda o preço do token nativo de uma rede (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain), uma única chamada extra à Prices API completa.
+2. A função serverless consulta a Alchemy nas 17 redes ao mesmo tempo, percorre a paginação e remove duplicados. Quando a Alchemy não manda o preço do token nativo de uma rede (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain), uma única chamada extra à Prices API completa. Na Robinhood Chain, onde nem os ERC-20 vêm com preço, a Prices API também é consultada por contrato, e o que continuar sem preço (spam) fica de fora.
 3. A mesma função filtra spam e poeira, converte saldos e preços e soma o total.
 4. O navegador recebe uma resposta pronta para exibir. Não há cálculo pesado no front.
 
@@ -80,10 +80,10 @@ flowchart LR
 
 ## Qualidade
 
-**158 testes automatizados**, todos passando:
+**166 testes automatizados**, todos passando:
 
 - **77 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
-- **81 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
+- **89 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
 
 ## Rodando localmente
 

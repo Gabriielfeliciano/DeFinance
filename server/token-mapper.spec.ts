@@ -5,6 +5,8 @@ import {
   ETH_NATIVE,
   NO_METADATA,
   PRICE_WITH_ERROR,
+  RH_TSLA,
+  RH_TSLA_CONTRACT,
   SPAM_NO_PRICE,
   USDC,
   ZERO_BALANCE,
@@ -62,6 +64,23 @@ describe('toTokenItems', () => {
 
   it('never uses the native fallback price for an ERC-20 token', () => {
     expect(toTokenItems([{ ...USDC, tokenPrices: [] }], 'ethereum', new Map(), 2500)).toEqual([]);
+  });
+
+  it('prices an ERC-20 from the contract price index when Alchemy sends no price', () => {
+    const prices = new Map([[RH_TSLA_CONTRACT, 405.83]]);
+    const [tsla] = toTokenItems([RH_TSLA], 'robinhood', new Map(), undefined, prices);
+    expect(tsla).toMatchObject({
+      id: `robinhood:${RH_TSLA_CONTRACT}`,
+      symbol: 'TSLA',
+      balance: 1,
+      priceUsd: 405.83,
+    });
+  });
+
+  it('keeps the Alchemy ERC-20 price over the contract price index', () => {
+    const prices = new Map([['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 2]]);
+    const [usdc] = toTokenItems([USDC], 'ethereum', new Map(), undefined, prices);
+    expect(usdc.priceUsd).toBe(0.9998);
   });
 
   it('maps an ERC-20 token with a lowercased contract id and no logo', () => {

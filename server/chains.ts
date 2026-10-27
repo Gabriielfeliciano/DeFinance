@@ -14,6 +14,8 @@ export interface ChainConfig {
   /** Slug da lista pública `tokens.coingecko.com/<slug>/all.json`. */
   coingecko: string;
   native: NativeToken;
+  /** A Portfolio API manda os ERC-20 desta rede sem preço: ele vem da Prices API, por contrato. */
+  erc20PricesByAddress?: boolean;
 }
 
 /** Servido de `public/` pelo próprio app. */
@@ -82,5 +84,10 @@ export const CHAIN_CONFIG: Record<ChainId, ChainConfig> = {
       logo: `${COIN_IMAGES}/50882/small/hyperliquid.jpg?1729431300`,
     },
   },
-  robinhood: { alchemy: 'robinhood-mainnet', coingecko: 'robinhood', native: ETH },
+  robinhood: {
+    alchemy: 'robinhood-mainnet',
+    coingecko: 'robinhood',
+    native: ETH,
+    erc20PricesByAddress: true,
+  },
 };

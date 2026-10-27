@@ -1,6 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ETH_NATIVE, PRICES_BY_SYMBOL, USDC, alchemyPage } from './__fixtures__/alchemy-tokens';
-import { AlchemyError, MAX_PAGES, fetchChainTokens, fetchPricesBySymbol } from './alchemy-client';
+import {
+  ETH_NATIVE,
+  PRICES_BY_ADDRESS,
+  PRICES_BY_SYMBOL,
+  RH_FAKE_USDG_CONTRACT,
+  RH_TSLA_CONTRACT,
+  USDC,
+  alchemyPage,
+} from './__fixtures__/alchemy-tokens';
+import {
+  AlchemyError,
+  MAX_PAGES,
+  MAX_PRICE_ADDRESSES,
+  fetchChainTokens,
+  fetchPricesByAddress,
+  fetchPricesBySymbol,
+} from './alchemy-client';
 
 const ADDRESS = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 const API_KEY = 'secret-key';
@@ -139,6 +154,57 @@ describe('fetchPricesBySymbol', () => {
     const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse({}, 503));
 
     const error = await fetchPricesBySymbol(['ETH'], API_KEY, fetchFn).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AlchemyError);
+    expect((error as Error).message).not.toContain(API_KEY);
+  });
+});
+
+describe('fetchPricesByAddress', () => {
+  it('POSTs the contracts to the Prices By Address endpoint and returns USD prices by contract', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse(PRICES_BY_ADDRESS));
+
+    const prices = await fetchPricesByAddress(
+      'robinhood',
+      [RH_TSLA_CONTRACT, RH_FAKE_USDG_CONTRACT],
+      API_KEY,
+      fetchFn,
+    );
+
+    const [url, init] = fetchFn.mock.calls[0];
+    expect(url).toBe(`https://api.g.alchemy.com/prices/v1/${API_KEY}/tokens/by-address`);
+    expect(init?.method).toBe('POST');
+    expect(requestBody(fetchFn, 0)).toEqual({
+      addresses: [
+        { network: 'robinhood-mainnet', address: RH_TSLA_CONTRACT },
+        { network: 'robinhood-mainnet', address: RH_FAKE_USDG_CONTRACT },
+      ],
+    });
+    expect(prices).toEqual(new Map([[RH_TSLA_CONTRACT, 405.83440413306727]]));
+  });
+
+  it(`asks for at most ${MAX_PRICE_ADDRESSES} contracts per request`, async () => {
+    const contracts = Array.from(
+      { length: 60 },
+      (_, i) => `0x${(i + 1).toString(16).padStart(40, '0')}`,
+    );
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse({ data: [] }));
+
+    await fetchPricesByAddress('robinhood', contracts, API_KEY, fetchFn);
+
+    const sizes = fetchFn.mock.calls.map((_, i) => requestBody(fetchFn, i).addresses.length);
+    expect(sizes).toEqual([MAX_PRICE_ADDRESSES, MAX_PRICE_ADDRESSES, 60 - 2 * MAX_PRICE_ADDRESSES]);
+  });
+
+  it('throws AlchemyError without the API key on a non-2xx response', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse({}, 503));
+
+    const error = await fetchPricesByAddress(
+      'robinhood',
+      [RH_TSLA_CONTRACT],
+      API_KEY,
+      fetchFn,
+    ).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AlchemyError);
     expect((error as Error).message).not.toContain(API_KEY);

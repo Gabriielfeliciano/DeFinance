@@ -1,6 +1,6 @@
 import { isValidEvmAddress } from '../shared/address';
 import { CHAINS, type ChainId, type TokensResponse } from '../shared/token';
-import { fetchChainTokens, fetchPricesBySymbol } from './alchemy-client';
+import { fetchChainTokens, fetchPricesByAddress, fetchPricesBySymbol } from './alchemy-client';
 import type { AlchemyToken } from './alchemy-types';
 import { CHAIN_CONFIG } from './chains';
 import type { LogoSource } from './coingecko-logos';
@@ -10,6 +10,7 @@ import {
   toDecimal,
   toTokenItems,
   type LogoIndex,
+  type PriceIndex,
 } from './token-mapper';
 
 export interface TokensHandlerDeps {
@@ -67,15 +68,22 @@ export async function handleTokensRequest(
     return Response.json({ error: 'Falha ao consultar saldos' }, { status: 502 });
   }
 
-  const nativePrices = await fetchMissingNativePrices(loaded, apiKey, deps.fetchFn).catch(
-    (error: unknown) => {
+  const [nativePrices, contractPrices] = await Promise.all([
+    fetchMissingNativePrices(loaded, apiKey, deps.fetchFn).catch((error: unknown) => {
       console.warn('Preço dos tokens nativos indisponível:', redact(error));
       return new Map<string, number>();
-    },
-  );
+    }),
+    fetchMissingContractPrices(loaded, apiKey, deps.fetchFn, redact),
+  ]);
 
   const tokens = loaded.flatMap(({ chain, raw, logos }) =>
-    toTokenItems(raw, chain, logos, nativePrices.get(CHAIN_CONFIG[chain].native.symbol)),
+    toTokenItems(
+      raw,
+      chain,
+      logos,
+      nativePrices.get(CHAIN_CONFIG[chain].native.symbol),
+      contractPrices.get(chain),
+    ),
   );
   const body: TokensResponse = buildPortfolio(tokens, failedChains);
   // Resultado parcial não vai para a CDN: o próximo acesso tenta de novo.
@@ -96,6 +104,44 @@ async function fetchMissingNativePrices(
   );
   if (symbols.size === 0) return new Map();
   return fetchPricesBySymbol([...symbols], apiKey, fetchFn);
+}
+
+/**
+ * Nas redes `erc20PricesByAddress`, os ERC-20 com saldo vão à Prices API por
+ * contrato. O que continuar sem preço (spam) fica fora da carteira.
+ */
+async function fetchMissingContractPrices(
+  loaded: LoadedChain[],
+  apiKey: string,
+  fetchFn: typeof fetch | undefined,
+  redact: (error: unknown) => string,
+): Promise<Map<ChainId, PriceIndex>> {
+  const entries = await Promise.all(
+    loaded
+      .filter(({ chain }) => CHAIN_CONFIG[chain].erc20PricesByAddress)
+      .map(async ({ chain, raw }): Promise<[ChainId, PriceIndex]> => {
+        const contracts = raw
+          .filter(isUnpricedErc20)
+          .map((token) => token.tokenAddress!.toLowerCase());
+        if (contracts.length === 0) return [chain, new Map()];
+        const prices = await fetchPricesByAddress(chain, contracts, apiKey, fetchFn).catch(
+          (error: unknown) => {
+            console.warn(`Preço dos ERC-20 indisponível (${chain}):`, redact(error));
+            return new Map<string, number>();
+          },
+        );
+        return [chain, prices];
+      }),
+  );
+  return new Map(entries);
+}
+
+function isUnpricedErc20(token: AlchemyToken): boolean {
+  return (
+    token.tokenAddress !== null &&
+    !(alchemyUsdPrice(token) > 0) &&
+    toDecimal(token.tokenBalance, token.tokenMetadata?.decimals ?? 18) > 0
+  );
 }
 
 function isUnpricedNative(token: AlchemyToken): boolean {

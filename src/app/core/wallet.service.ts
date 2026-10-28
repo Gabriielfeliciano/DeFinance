@@ -26,21 +26,24 @@ export class WalletService {
 
   private readonly enabled = computed(() => this._wallets().filter((wallet) => wallet.enabled));
   private readonly loaded = computed(() => this.enabled().filter((wallet) => wallet.status === 'success'));
+  /** Ligadas que responderam, com ou sem tokens. */
+  private readonly settled = computed(() =>
+    this.enabled().filter((wallet) => wallet.status === 'success' || wallet.status === 'empty'),
+  );
 
   readonly status = computed(() => portfolioStatus(this.enabled(), this._wallets().length));
   readonly tokens = computed(() => mergeTokens(this.loaded().map((wallet) => wallet.tokens)));
   readonly totalValueUsd = computed(() => this.loaded().reduce((sum, wallet) => sum + wallet.totalValueUsd, 0));
   /** Redes que o proxy não conseguiu consultar em alguma carteira ligada. */
   readonly failedChains = computed(() => {
-    const failed = new Set(this.loaded().flatMap((wallet) => wallet.failedChains));
+    // Inclui as vazias: as redes que falharam podem ser justamente onde estão os tokens.
+    const failed = new Set(this.settled().flatMap((wallet) => wallet.failedChains));
     return CHAINS.filter((chain) => failed.has(chain));
   });
   /** Carteiras ligadas que falharam por inteiro: o total vem sem elas. */
   readonly failedWallets = computed(() => this.enabled().filter((wallet) => wallet.status === 'error'));
   /** Carteiras ligadas que entraram na soma (com ou sem tokens). */
-  readonly loadedCount = computed(
-    () => this.enabled().filter((wallet) => wallet.status === 'success' || wallet.status === 'empty').length,
-  );
+  readonly loadedCount = computed(() => this.settled().length);
 
   add(address: string): AddResult {
     const wallets = this._wallets();

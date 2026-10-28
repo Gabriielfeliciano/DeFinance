@@ -183,6 +183,13 @@ describe('WalletService', () => {
     expect(service.failedChains()).toEqual(['scroll']);
   });
 
+  it('keeps the failed chains of a wallet that came back empty', () => {
+    service.add(ADDRESS_A);
+    succeed(ADDRESS_A, [], ['linea']);
+    expect(service.status()).toBe('empty');
+    expect(service.failedChains()).toEqual(['linea']);
+  });
+
   it('treats a response cached before failedChains existed as complete', () => {
     service.add(ADDRESS_A);
     expectTokensRequest(ADDRESS_A).flush({ tokens: [ETH], totalValueUsd: 920 });

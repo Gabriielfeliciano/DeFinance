@@ -58,6 +58,21 @@ describe('WalletCardsComponent', () => {
     expect(cards()[1].classList).toContain('wallet-card--off');
   });
 
+  it('fades only the content of a disabled card, never its controls', async () => {
+    await render([wallet(ADDRESS_A), wallet(ADDRESS_B, { enabled: false })]);
+    const off = cards()[1];
+    expect(getComputedStyle(off).opacity).not.toBe('0.45');
+    expect(getComputedStyle(off.querySelector('.address')!).opacity).toBe('0.45');
+    expect(getComputedStyle(off.querySelector('.value')!).opacity).toBe('0.45');
+  });
+
+  it('gives the remove button a tap target of at least 32px', async () => {
+    await render([wallet(ADDRESS_A)]);
+    const remove = cards()[0].querySelector<HTMLButtonElement>('.remove')!;
+    expect(getComputedStyle(remove).minWidth).toBe('32px');
+    expect(getComputedStyle(remove).minHeight).toBe('32px');
+  });
+
   it('shows a skeleton while the wallet loads', async () => {
     await render([wallet(ADDRESS_A, { status: 'loading' })]);
     expect(cards()[0].querySelector('[data-testid="wallet-card-loading"]')).not.toBeNull();

@@ -5,16 +5,16 @@
     class="address-input"
     type="text"
     name="address"
-    placeholder="0x…"
+    [placeholder]="placeholder()"
     autocomplete="off"
     spellcheck="false"
     [value]="value()"
-    [disabled]="disabled()"
+    [disabled]="locked()"
     [attr.aria-invalid]="error() ? true : null"
     [attr.aria-describedby]="error() ? 'wallet-address-error' : null"
     (input)="onInput($event)"
   />
-  <button type="submit" class="submit" [disabled]="disabled()">Ver carteira</button>
+  <button type="submit" class="submit" [disabled]="locked()">{{ buttonLabel() }}</button>
 </form>
 @if (error(); as message) {
   <p id="wallet-address-error" class="error" role="alert" data-testid="address-error">{{ message }}</p>

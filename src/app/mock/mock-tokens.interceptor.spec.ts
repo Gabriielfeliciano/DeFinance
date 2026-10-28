@@ -2,12 +2,13 @@ import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } fr
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TokensResponse } from '../../../shared/token';
-import { MOCK_PORTFOLIO } from './mock-portfolio';
+import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO } from './mock-portfolio';
 import {
   MOCK_EMPTY_ADDRESS,
   MOCK_ERROR_ADDRESS,
   MOCK_LATENCY_MS,
   MOCK_PARTIAL_ADDRESS,
+  MOCK_SECOND_ADDRESS,
   mockTokensInterceptor,
 } from './mock-tokens.interceptor';
 
@@ -66,6 +67,12 @@ describe('mockTokensInterceptor', () => {
     expect(result.body?.failedChains).toEqual(['linea', 'scroll']);
   });
 
+  it('serves the second portfolio for MOCK_SECOND_ADDRESS', () => {
+    const result = getTokens(MOCK_SECOND_ADDRESS);
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(result.body).toEqual(MOCK_SECOND_PORTFOLIO);
+  });
+
   it('lets every other request through to the real backend', () => {
     http.get('/other').subscribe();
     backend.expectOne('/other').flush({});
@@ -82,5 +89,12 @@ describe('MOCK_PORTFOLIO', () => {
     expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.chain)).size).toBeGreaterThanOrEqual(6);
     expect(MOCK_PORTFOLIO.failedChains).toEqual([]);
     expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.symbol)).size).toBeGreaterThan(7);
+  });
+});
+
+describe('MOCK_SECOND_PORTFOLIO', () => {
+  it('shares tokens with MOCK_PORTFOLIO so the merge shows up', () => {
+    const ids = new Set(MOCK_PORTFOLIO.tokens.map((token) => token.id));
+    expect(MOCK_SECOND_PORTFOLIO.tokens.filter((token) => ids.has(token.id)).length).toBeGreaterThanOrEqual(2);
   });
 });

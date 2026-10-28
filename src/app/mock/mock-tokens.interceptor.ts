@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpResponse, type HttpInterceptorFn } from '@angular/common/http';
 import { delay, mergeMap, of, throwError, timer } from 'rxjs';
 import type { TokensResponse } from '../../../shared/token';
-import { MOCK_PORTFOLIO } from './mock-portfolio';
+import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO } from './mock-portfolio';
 
 export const MOCK_LATENCY_MS = 900;
 /** Endereço que simula carteira vazia. */
@@ -10,6 +10,8 @@ export const MOCK_EMPTY_ADDRESS = '0x0000000000000000000000000000000000000000';
 export const MOCK_ERROR_ADDRESS = '0x000000000000000000000000000000000000dead';
 /** Endereço que simula Linea e Scroll fora do ar (resposta parcial). */
 export const MOCK_PARTIAL_ADDRESS = '0x00000000000000000000000000000000000beef0';
+/** Segunda carteira, com tokens em comum com a de exemplo (multi-carteira). */
+export const MOCK_SECOND_ADDRESS = '0x00000000000000000000000000000000000000b2';
 
 /** Responde `/api/tokens` com dados falsos. Só entra no build pela configuração `mock`. */
 export const mockTokensInterceptor: HttpInterceptorFn = (req, next) => {
@@ -29,6 +31,8 @@ export const mockTokensInterceptor: HttpInterceptorFn = (req, next) => {
       ? { tokens: [], totalValueUsd: 0, failedChains: [] }
       : address === MOCK_PARTIAL_ADDRESS
         ? { ...MOCK_PORTFOLIO, failedChains: ['linea', 'scroll'] }
-        : MOCK_PORTFOLIO;
+        : address === MOCK_SECOND_ADDRESS
+          ? MOCK_SECOND_PORTFOLIO
+          : MOCK_PORTFOLIO;
   return of(new HttpResponse({ status: 200, url: req.url, body })).pipe(delay(MOCK_LATENCY_MS));
 };

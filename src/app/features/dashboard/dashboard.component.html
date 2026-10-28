@@ -1,13 +1,30 @@
 <header class="hero">
   <h1 class="brand">DeFinance</h1>
-  <p class="tagline">Cole o endereço público de uma carteira para ver seus ativos em {{ chainCount }} redes EVM: Ethereum, Arbitrum, Base, Polygon e outras.</p>
-  <app-wallet-input [disabled]="wallet.status() === 'loading'" (addressSubmit)="onAddress($event)" />
+  <p class="tagline">Cole até {{ maxWallets }} endereços públicos de carteira para ver seus ativos somados em {{ chainCount }} redes EVM: Ethereum, Arbitrum, Base, Polygon e outras.</p>
+  <app-wallet-input [addresses]="addresses()" [max]="maxWallets" (addressSubmit)="onAddress($event)" />
 </header>
+
+@if (wallet.wallets().length > 0) {
+  <app-wallet-cards
+    class="wallets"
+    [wallets]="wallet.wallets()"
+    (toggle)="wallet.toggle($event)"
+    (remove)="onRemove($event)"
+    (retry)="wallet.retry($event)"
+  />
+}
+
+@if (wallet.status() === 'success' && wallet.failedWallets().length > 0) {
+  <div class="banner banner--warning" role="status" data-testid="failed-wallets">
+    <span>Não foi possível carregar {{ failedWalletNames() }}. O total pode estar incompleto.</span>
+    <button type="button" class="retry" (click)="wallet.retryFailed()">Tentar novamente</button>
+  </div>
+}
 
 @if (wallet.failedChains().length > 0) {
   <div class="banner banner--warning" role="status" data-testid="partial">
     <span>Não foi possível carregar {{ failedChainNames() }} agora. O total pode estar incompleto.</span>
-    <button type="button" class="retry" (click)="wallet.retry()">Tentar novamente</button>
+    <button type="button" class="retry" (click)="wallet.retryFailed()">Tentar novamente</button>
   </div>
 }
 
@@ -31,7 +48,7 @@
   @case ('error') {
     <div class="banner" role="alert" data-testid="error">
       <span>Não foi possível carregar a carteira. Verifique sua conexão e tente de novo.</span>
-      <button type="button" class="retry" (click)="wallet.retry()">Tentar novamente</button>
+      <button type="button" class="retry" (click)="wallet.retryFailed()">Tentar novamente</button>
     </div>
   }
   @case ('empty') {

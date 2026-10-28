@@ -2,7 +2,7 @@
 
 **Veja quanto vale uma carteira cripto em segundos, sem conectar nada.**
 
-DeFinance é um painel de portfólio somente leitura para carteiras EVM. Você cola o endereço público de uma carteira e o app mostra os tokens, o valor total em dólar e a distribuição por ativo em **17 redes EVM**, de Ethereum, Arbitrum e Base a Polygon, BNB Chain e Avalanche, tudo em uma tela.
+DeFinance é um painel de portfólio somente leitura para carteiras EVM. Você cola o endereço público de até 3 carteiras e o app mostra os tokens, o valor total em dólar e a distribuição por ativo em **17 redes EVM**, de Ethereum, Arbitrum e Base a Polygon, BNB Chain e Avalanche, tudo em uma tela.
 
 ### 👉 [Abrir a demo ao vivo](https://de-finance-psi.vercel.app)
 
@@ -27,6 +27,7 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 - **Valor total em destaque**, em USD.
 - **Gráfico de distribuição:** o mesmo ativo em redes diferentes vira uma fatia só, e os ativos menores são agrupados em "Outros" para o gráfico continuar legível.
 - **Lista de tokens** com quantidade, preço unitário e valor, ordenada do maior para o menor.
+- **Até 3 carteiras somadas:** cada carteira vira um cartão com o próprio valor e uma caixa para incluir ou tirar da soma. O mesmo token em carteiras diferentes vira uma linha só. Se uma carteira falhar, as outras continuam aparecendo e um aviso diz qual ficou de fora. Nada é salvo: recarregar a página começa do zero.
 - **Filtro por rede**, só com as redes onde a carteira tem tokens e a contagem de cada uma.
 - **Filtro automático de spam:** tokens sem preço de mercado, sem dados ou com valor abaixo de US$ 0,01 não aparecem.
 - **Tema claro e escuro:** segue o sistema na primeira visita e lembra a escolha depois.
@@ -103,7 +104,7 @@ npx vercel dev
 
 O app abre em http://localhost:3000. O `vercel dev` usa as variáveis do projeto no Vercel, por isso a chave precisa estar cadastrada lá.
 
-**Só quer ver a interface?** `npm run start:mock` sobe o app em http://localhost:4200 com dados fictícios, sem precisar de chave nem de conta no Vercel. Endereços de demonstração: `0x0000000000000000000000000000000000000000` (carteira vazia), `0x000000000000000000000000000000000000dead` (erro) e `0x00000000000000000000000000000000000beef0` (Linea e Scroll fora do ar).
+**Só quer ver a interface?** `npm run start:mock` sobe o app em http://localhost:4200 com dados fictícios, sem precisar de chave nem de conta no Vercel. Endereços de demonstração: `0x0000000000000000000000000000000000000000` (carteira vazia), `0x000000000000000000000000000000000000dead` (erro) `0x00000000000000000000000000000000000beef0` (Linea e Scroll fora do ar) e `0x00000000000000000000000000000000000000b2` (segunda carteira, com tokens em comum com as outras, para testar a soma).
 
 ### Testes
 

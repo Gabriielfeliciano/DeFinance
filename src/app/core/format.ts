@@ -20,3 +20,8 @@ export function formatPrice(value: number): string {
 export function formatAmount(value: number): string {
   return value >= 1 ? AMOUNT.format(value) : AMOUNT_SMALL.format(value);
 }
+
+/** `0xd8dA…6045`: prefixo, 4 caracteres e os 4 últimos. */
+export function shortAddress(address: string): string {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}

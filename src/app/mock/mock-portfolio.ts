@@ -43,3 +43,17 @@ export const MOCK_PORTFOLIO: TokensResponse = {
   totalValueUsd: tokens.reduce((total, item) => total + item.valueUsd, 0),
   failedChains: [],
 };
+
+const secondTokens: TokenItem[] = [
+  token('ethereum', 'native', 'ETH', 'Ethereum', 0.8, 3512.4, `${LOGO}/279/small/ethereum.png`),
+  token('ethereum', '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'USDC', 'USD Coin', 1500, 0.9998, `${LOGO}/6319/small/usdc.png`),
+  token('base', 'native', 'ETH', 'Ethereum', 0.1, 3512.4, `${LOGO}/279/small/ethereum.png`),
+  token('optimism', '0x4200000000000000000000000000000000000042', 'OP', 'Optimism', 300, 1.74, `${LOGO}/25244/small/Optimism.png`),
+];
+
+/** Segunda carteira do modo mock: tem tokens em comum com `MOCK_PORTFOLIO` para mostrar a soma. */
+export const MOCK_SECOND_PORTFOLIO: TokensResponse = {
+  tokens: secondTokens,
+  totalValueUsd: secondTokens.reduce((total, item) => total + item.valueUsd, 0),
+  failedChains: [],
+};

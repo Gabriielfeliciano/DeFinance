@@ -1,58 +1,124 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
-import type { ChainId, TokenItem, TokensResponse } from '../../../shared/token';
+import { CHAINS, type ChainId, type TokensResponse } from '../../../shared/token';
+import { mergeTokens, portfolioStatus, type WalletState } from './portfolio';
 
-export type WalletStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
+export type { PortfolioStatus as WalletStatus } from './portfolio';
 
 export const REQUEST_TIMEOUT_MS = 15_000;
+export const MAX_WALLETS = 3;
+
+export type AddResult = 'added' | 'duplicate' | 'full';
+
+const key = (address: string) => address.toLowerCase();
 
 @Injectable({ providedIn: 'root' })
 export class WalletService {
   private readonly http = inject(HttpClient);
-  private request?: Subscription;
-  private lastAddress: string | null = null;
+  /** Uma requisição por carteira, pela chave em minúsculas. */
+  private readonly requests = new Map<string, Subscription>();
 
-  private readonly _status = signal<WalletStatus>('idle');
-  private readonly _tokens = signal<TokenItem[]>([]);
-  private readonly _totalValueUsd = signal(0);
-  private readonly _failedChains = signal<ChainId[]>([]);
+  private readonly _wallets = signal<WalletState[]>([]);
 
-  readonly status = this._status.asReadonly();
-  readonly tokens = this._tokens.asReadonly();
-  readonly totalValueUsd = this._totalValueUsd.asReadonly();
-  /** Redes que o proxy não conseguiu consultar: a carteira veio sem elas. */
-  readonly failedChains = this._failedChains.asReadonly();
+  /** Na ordem em que foram adicionadas. */
+  readonly wallets = this._wallets.asReadonly();
 
-  load(address: string): void {
-    this.lastAddress = address;
-    this.request?.unsubscribe();
-    this.setData([], 0);
-    this._status.set('loading');
+  private readonly enabled = computed(() => this._wallets().filter((wallet) => wallet.enabled));
+  private readonly loaded = computed(() => this.enabled().filter((wallet) => wallet.status === 'success'));
+  /** Ligadas que responderam, com ou sem tokens. */
+  private readonly settled = computed(() =>
+    this.enabled().filter((wallet) => wallet.status === 'success' || wallet.status === 'empty'),
+  );
 
-    this.request = this.http
+  readonly status = computed(() => portfolioStatus(this.enabled(), this._wallets().length));
+  readonly tokens = computed(() => mergeTokens(this.loaded().map((wallet) => wallet.tokens)));
+  readonly totalValueUsd = computed(() => this.loaded().reduce((sum, wallet) => sum + wallet.totalValueUsd, 0));
+  /** Redes que o proxy não conseguiu consultar em alguma carteira ligada. */
+  readonly failedChains = computed(() => {
+    // Inclui as vazias: as redes que falharam podem ser justamente onde estão os tokens.
+    const failed = new Set(this.settled().flatMap((wallet) => wallet.failedChains));
+    return CHAINS.filter((chain) => failed.has(chain));
+  });
+  /** Carteiras ligadas que falharam por inteiro: o total vem sem elas. */
+  readonly failedWallets = computed(() => this.enabled().filter((wallet) => wallet.status === 'error'));
+  /** Carteiras ligadas que entraram na soma (com ou sem tokens). */
+  readonly loadedCount = computed(() => this.settled().length);
+
+  add(address: string): AddResult {
+    const wallets = this._wallets();
+    if (wallets.some((wallet) => key(wallet.address) === key(address))) return 'duplicate';
+    if (wallets.length >= MAX_WALLETS) return 'full';
+
+    this._wallets.set([...wallets, this.loadingState(address, true)]);
+    this.fetch(address);
+    return 'added';
+  }
+
+  remove(address: string): void {
+    this.requests.get(key(address))?.unsubscribe();
+    this.requests.delete(key(address));
+
+    const remaining = this._wallets().filter((wallet) => key(wallet.address) !== key(address));
+    // Nunca fica "carteiras adicionadas, nenhuma ligada".
+    if (remaining.length > 0 && !remaining.some((wallet) => wallet.enabled)) {
+      remaining[0] = { ...remaining[0], enabled: true };
+    }
+    this._wallets.set(remaining);
+  }
+
+  /** A última carteira ligada não desliga. */
+  toggle(address: string): void {
+    const target = this.find(address);
+    if (!target || (target.enabled && this.enabled().length === 1)) return;
+    this.patch(address, { enabled: !target.enabled });
+  }
+
+  retry(address: string): void {
+    if (this.find(address)) this.fetch(address);
+  }
+
+  /** Refaz as carteiras ligadas com erro ou com redes que falharam. */
+  retryFailed(): void {
+    for (const wallet of this.enabled()) {
+      if (wallet.status === 'error' || wallet.failedChains.length > 0) this.fetch(wallet.address);
+    }
+  }
+
+  private fetch(address: string): void {
+    this.requests.get(key(address))?.unsubscribe();
+    const enabled = this.find(address)?.enabled ?? true;
+    this.patch(address, this.loadingState(address, enabled));
+
+    const request = this.http
       .get<TokensResponse>('/api/tokens', { params: { address } })
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
-        next: (response) => {
-          this.setData(response.tokens, response.totalValueUsd, response.failedChains);
-          this._status.set(response.tokens.length > 0 ? 'success' : 'empty');
-        },
-        error: () => {
-          this.setData([], 0);
-          this._status.set('error');
-        },
+        // `failedChains` ausente = resposta antiga, ainda no cache da CDN: trata como completa.
+        next: (response) =>
+          this.patch(address, {
+            status: response.tokens.length > 0 ? 'success' : 'empty',
+            tokens: response.tokens,
+            totalValueUsd: response.totalValueUsd,
+            failedChains: response.failedChains ?? [],
+          }),
+        error: () => this.patch(address, { status: 'error' }),
       });
+    this.requests.set(key(address), request);
   }
 
-  retry(): void {
-    if (this.lastAddress) this.load(this.lastAddress);
+  private loadingState(address: string, enabled: boolean): WalletState {
+    return { address, enabled, status: 'loading', tokens: [], totalValueUsd: 0, failedChains: [] };
   }
 
-  /** `failedChains` ausente = resposta antiga, ainda no cache da CDN: trata como completa. */
-  private setData(tokens: TokenItem[], totalValueUsd: number, failedChains: ChainId[] = []): void {
-    this._tokens.set(tokens);
-    this._totalValueUsd.set(totalValueUsd);
-    this._failedChains.set(failedChains);
+  private find(address: string): WalletState | undefined {
+    return this._wallets().find((wallet) => key(wallet.address) === key(address));
+  }
+
+  /** Atualiza só a carteira `address`; se ela foi removida, não faz nada. */
+  private patch(address: string, changes: Partial<WalletState>): void {
+    this._wallets.update((wallets) =>
+      wallets.map((wallet) => (key(wallet.address) === key(address) ? { ...wallet, ...changes } : wallet)),
+    );
   }
 }

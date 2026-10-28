@@ -7,7 +7,8 @@ em iterações futuras.
   integração com cada protocolo individualmente, escopo grande demais
 - **Login / autenticação** — MVP é 100% somente-leitura e sem persistência
   de usuário
-- **Multi-carteira** — ver várias carteiras ao mesmo tempo ou agregadas
+- **Salvar carteiras por usuário** — a multi-carteira (até 3, feita em
+  2026-10-28) não guarda nada; salvar depende de login
 - **Histórico de evolução do patrimônio** — exige armazenar série temporal,
   precisa de back-end com persistência
 - **Alertas / notificações** — exige back-end + envio assíncrono

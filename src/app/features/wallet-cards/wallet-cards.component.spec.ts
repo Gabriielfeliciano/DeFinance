@@ -85,4 +85,23 @@ describe('WalletCardsComponent', () => {
     [...cards()[0].querySelectorAll('button')].find((b) => b.textContent?.includes('Tentar novamente'))!.click();
     expect(events.retry).toEqual([ADDRESS_A]);
   });
+
+  it('shows the net value (tokens + supplied - borrowed) on the card', async () => {
+    await render([
+      wallet(ADDRESS_A, {
+        totalValueUsd: 100,
+        lending: [
+          {
+            id: 'ethereum:v3',
+            chain: 'ethereum',
+            label: 'Aave · Ethereum',
+            supplied: [{ underlying: '0x1', symbol: 'WBTC', name: 'Wrapped BTC', balance: 1, valueUsd: 500 }],
+            borrowed: [{ underlying: '0x2', symbol: 'USDC', name: 'USD Coin', balance: 700, valueUsd: 700 }],
+            healthFactor: 1.2,
+          },
+        ],
+      }),
+    ]);
+    expect(cards()[0].querySelector('[data-testid="wallet-card-total"]')?.textContent?.trim()).toBe('-$100.00');
+  });
 });

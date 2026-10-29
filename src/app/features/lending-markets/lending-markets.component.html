@@ -1,0 +1,43 @@
+<ul class="markets" aria-label="Posições na Aave">
+  @for (market of markets(); track market.wallet + market.id) {
+    <li class="card market" data-testid="lending-card">
+      <div class="head">
+        <div class="titles">
+          <h3 class="title" data-testid="lending-title">{{ market.label }}</h3>
+          @if (showWallet()) {
+            <span class="wallet" data-testid="lending-wallet" [title]="market.wallet">{{ short(market.wallet) }}</span>
+          }
+        </div>
+        @if (market.healthFactor !== null) {
+          <span class="hf" [class]="'hf hf--' + level(market.healthFactor)" data-testid="lending-hf">
+            Health factor {{ hf(market.healthFactor) }}
+          </span>
+        }
+      </div>
+      @if (market.supplied.length > 0) {
+        <section class="group">
+          <h4 class="group-title">Depositado</h4>
+          @for (asset of market.supplied; track asset.underlying) {
+            <div class="row" data-testid="lending-supplied">
+              <span class="symbol">{{ asset.symbol }}</span>
+              <span class="amount">{{ amount(asset.balance) }}</span>
+              <span class="value">{{ usd(asset.valueUsd) }}</span>
+            </div>
+          }
+        </section>
+      }
+      @if (market.borrowed.length > 0) {
+        <section class="group">
+          <h4 class="group-title">Emprestado</h4>
+          @for (asset of market.borrowed; track asset.underlying) {
+            <div class="row" data-testid="lending-borrowed">
+              <span class="symbol">{{ asset.symbol }}</span>
+              <span class="amount">{{ amount(asset.balance) }}</span>
+              <span class="value">{{ usd(asset.valueUsd) }}</span>
+            </div>
+          }
+        </section>
+      }
+    </li>
+  }
+</ul>

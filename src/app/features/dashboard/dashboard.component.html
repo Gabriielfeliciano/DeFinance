@@ -28,6 +28,13 @@
   </div>
 }
 
+@if (wallet.lendingFailedWallets().length > 0) {
+  <div class="banner banner--warning" role="status" data-testid="lending-failed">
+    <span>Não foi possível carregar as posições da Aave. O total pode estar incompleto.</span>
+    <button type="button" class="retry" (click)="wallet.retryFailed()">Tentar novamente</button>
+  </div>
+}
+
 @switch (wallet.status()) {
   @case ('idle') {
     <p class="hint" data-testid="idle">Somente leitura: nunca pedimos chave privada nem conexão de carteira.</p>
@@ -66,15 +73,19 @@
           [totalValueUsd]="visibleTotal()"
           [label]="summaryLabel()"
           [caption]="summaryCaption()"
+          [breakdown]="breakdown()"
         />
         <div class="card chart-card">
           @defer (on idle) {
-            <app-portfolio-chart [tokens]="visibleTokens()" />
+            <app-portfolio-chart [tokens]="chartTokens()" />
           } @placeholder {
             <div class="chart-placeholder" data-testid="chart-placeholder"></div>
           }
         </div>
       </div>
+      @if (hasLending()) {
+        <app-lending-markets [markets]="visibleLending()" [showWallet]="showWallet()" />
+      }
       <app-token-list class="card" [tokens]="visibleTokens()" />
     </section>
   }

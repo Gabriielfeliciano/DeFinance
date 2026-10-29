@@ -39,4 +39,17 @@ describe('PortfolioSummaryComponent', () => {
     expect(el.querySelector('[data-testid="summary-label"]')?.textContent?.trim()).toBe('Valor em Base');
     expect(el.querySelector('[data-testid="summary-caption"]')?.textContent?.trim()).toBe('4 tokens nesta rede');
   });
+
+  it('shows the breakdown under the total only when given', async () => {
+    const fixture = TestBed.createComponent(PortfolioSummaryComponent);
+    fixture.componentRef.setInput('totalValueUsd', 10);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="summary-breakdown"]')).toBeNull();
+    fixture.componentRef.setInput('breakdown', 'Carteira $1.00 · Aave depositado $2.00 · dívida −$3.00');
+    await fixture.whenStable();
+    expect(el.querySelector('[data-testid="summary-breakdown"]')?.textContent?.trim()).toBe(
+      'Carteira $1.00 · Aave depositado $2.00 · dívida −$3.00',
+    );
+  });
 });

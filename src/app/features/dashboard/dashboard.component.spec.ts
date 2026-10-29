@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import type { ChainId, TokenItem } from '../../../../shared/token';
 import type { WalletState } from '../../core/portfolio';
-import { WalletService, type WalletStatus } from '../../core/wallet.service';
+import { WalletService, type WalletLending, type WalletStatus } from '../../core/wallet.service';
 import { submitAddress } from '../../testing/submit-address';
 import { DashboardComponent } from './dashboard.component';
 
@@ -14,6 +14,8 @@ class FakeWalletService {
   readonly wallets = signal<WalletState[]>([]);
   readonly failedWallets = signal<WalletState[]>([]);
   readonly loadedCount = signal(0);
+  readonly lending = signal<WalletLending[]>([]);
+  readonly lendingFailedWallets = signal<WalletState[]>([]);
   readonly add = vi.fn<(address: string) => string>(() => 'added');
   readonly remove = vi.fn<(address: string) => void>();
   readonly toggle = vi.fn<(address: string) => void>();
@@ -270,6 +272,100 @@ describe('DashboardComponent', () => {
       expect(wallet.add).toHaveBeenCalledWith(ADDRESS);
       expect(chip(el, 'all').getAttribute('aria-pressed')).toBe('true');
       expect(rowCount(el)).toBe(3);
+    });
+  });
+
+  describe('Aave', () => {
+    const WBTC_WALLET: TokenItem = { id: 'ethereum:0xwbtc', chain: 'ethereum', symbol: 'WBTC', name: 'Wrapped BTC', balance: 0.001, priceUsd: 100000, valueUsd: 100 };
+    const ETH_46: TokenItem = { ...ETH, valueUsd: 46 };
+    const ETH_MARKET: WalletLending = {
+      wallet: ADDRESS,
+      id: 'ethereum:0xpool',
+      chain: 'ethereum',
+      label: 'Aave · Ethereum',
+      supplied: [{ underlying: '0xwbtc', symbol: 'WBTC', name: 'Wrapped BTC', balance: 2, valueUsd: 200000 }],
+      borrowed: [{ underlying: '0xusdc', symbol: 'USDC', name: 'USD Coin', balance: 150000, valueUsd: 150000 }],
+      healthFactor: 1.38,
+    };
+    const BASE_MARKET: WalletLending = {
+      wallet: ADDRESS,
+      id: 'base:0xpool',
+      chain: 'base',
+      label: 'Aave · Base',
+      supplied: [{ underlying: '0xusdc', symbol: 'USDC', name: 'USD Coin', balance: 45064, valueUsd: 45064 }],
+      borrowed: [{ underlying: '0xweth', symbol: 'WETH', name: 'Wrapped Ether', balance: 0.2, valueUsd: 626 }],
+      healthFactor: 3,
+    };
+    const text = (el: HTMLElement, id: string) => el.querySelector(`[data-testid="${id}"]`)?.textContent?.trim();
+
+    async function renderAave() {
+      wallet.status.set('success');
+      wallet.tokens.set([ETH_46, WBTC_WALLET]);
+      wallet.totalValueUsd.set(146 + 245064 - 150626);
+      wallet.lending.set([ETH_MARKET, BASE_MARKET]);
+      return render();
+    }
+
+    it('shows net worth label, net total and the breakdown', async () => {
+      const { el } = await renderAave();
+      expect(text(el, 'summary-label')).toBe('Patrimônio líquido');
+      expect(text(el, 'total')).toBe('$94,584.00');
+      expect(text(el, 'summary-breakdown')).toBe(
+        'Carteira $146.00 · Aave depositado $245,064.00 · dívida −$150,626.00',
+      );
+      expect(el.querySelectorAll('[data-testid="lending-card"]').length).toBe(2);
+    });
+
+    it('does not show wallet addresses on the cards with a single wallet', async () => {
+      const { el } = await renderAave();
+      expect(el.querySelector('[data-testid="lending-wallet"]')).toBeNull();
+    });
+
+    it('shows wallet addresses on the cards with several wallets', async () => {
+      wallet.wallets.set([walletState(ADDRESS), walletState(OTHER)]);
+      const { el } = await renderAave();
+      expect(el.querySelector('[data-testid="lending-wallet"]')).not.toBeNull();
+    });
+
+    it('keeps the chip of a chain with only an Aave market and filters to it', async () => {
+      const { fixture, el } = await renderAave();
+      const base = el.querySelector<HTMLButtonElement>('[data-testid="chip-base"]');
+      expect(base).not.toBeNull();
+      base!.click();
+      await fixture.whenStable();
+      expect(el.querySelectorAll('[data-testid="lending-card"]').length).toBe(1);
+      expect(text(el, 'summary-label')).toBe('Patrimônio líquido em Base');
+      expect(text(el, 'total')).toBe('$44,438.00');
+      expect(el.querySelectorAll('[data-testid="token-row"]').length).toBe(0);
+    });
+
+    it('keeps today labels without Aave', async () => {
+      wallet.status.set('success');
+      wallet.tokens.set([ETH]);
+      wallet.totalValueUsd.set(920);
+      const { el } = await render();
+      expect(text(el, 'summary-label')).toBe('Valor total');
+      expect(el.querySelector('[data-testid="summary-breakdown"]')).toBeNull();
+      expect(el.querySelector('app-lending-markets')).toBeNull();
+    });
+
+    it('passes wallet tokens plus supplied assets (not debts) to the chart', async () => {
+      const { fixture } = await renderAave();
+      const tokens = (fixture.componentInstance as unknown as { chartTokens: () => TokenItem[] }).chartTokens();
+      expect(tokens.filter((t) => t.symbol === 'WBTC').length).toBe(2);
+      expect(tokens.some((t) => t.symbol === 'WETH')).toBe(false);
+    });
+
+    it('shows the Aave failure banner and retries', async () => {
+      wallet.status.set('success');
+      wallet.tokens.set([ETH]);
+      wallet.lendingFailedWallets.set([walletState(ADDRESS, { lendingFailed: true })]);
+      const { el } = await render();
+      const banner = el.querySelector<HTMLElement>('[data-testid="lending-failed"]');
+      expect(banner?.getAttribute('role')).toBe('status');
+      expect(banner?.textContent).toContain('Não foi possível carregar as posições da Aave. O total pode estar incompleto.');
+      banner!.querySelector<HTMLButtonElement>('button')!.click();
+      expect(wallet.retryFailed).toHaveBeenCalledTimes(1);
     });
   });
 });

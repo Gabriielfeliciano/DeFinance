@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { formatUsd, shortAddress } from '../../core/format';
-import type { WalletState } from '../../core/portfolio';
+import { walletNetUsd, type WalletState } from '../../core/portfolio';
 
 @Component({
   selector: 'app-wallet-cards',
@@ -19,4 +19,5 @@ export class WalletCardsComponent {
 
   protected readonly short = shortAddress;
   protected readonly usd = formatUsd;
+  protected readonly net = walletNetUsd;
 }

@@ -32,7 +32,7 @@
           </div>
         }
         @default {
-          <strong class="value" data-testid="wallet-card-total">{{ usd(wallet.totalValueUsd) }}</strong>
+          <strong class="value" data-testid="wallet-card-total">{{ usd(net(wallet)) }}</strong>
         }
       }
     </li>

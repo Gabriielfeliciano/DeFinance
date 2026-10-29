@@ -7,6 +7,8 @@ import { MAX_WALLETS, REQUEST_TIMEOUT_MS, WalletService } from './wallet.service
 const ADDRESS_A = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
 const ADDRESS_B = '0x1111111111111111111111111111111111111111';
 const ADDRESS_C = '0x2222222222222222222222222222222222222222';
+const SOLANA = '86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY';
+const SOLANA_OTHER_CASE = '86XCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY';
 const ADDRESS_D = '0x3333333333333333333333333333333333333333';
 
 const ETH: TokenItem = {
@@ -134,6 +136,27 @@ describe('WalletService', () => {
     service.remove(ADDRESS_A);
     expect(service.status()).toBe('idle');
     expect(service.tokens()).toEqual([]);
+  });
+
+  it('adds an EVM and a Solana wallet together and merges tokens and totals', () => {
+    const SOL: TokenItem = {
+      id: 'solana:native', chain: 'solana', symbol: 'SOL', name: 'Solana', balance: 2, priceUsd: 100, valueUsd: 200,
+    };
+    expect(service.add(ADDRESS_A)).toBe('added');
+    expect(service.add(SOLANA)).toBe('added');
+    succeed(ADDRESS_A);
+    succeed(SOLANA, [SOL]);
+    expect(service.tokens().map((token) => token.id).sort()).toEqual(['ethereum:native', 'solana:native']);
+    expect(service.totalValueUsd()).toBe(1120);
+  });
+
+  it('removes a Solana wallet by its exact case', () => {
+    service.add(SOLANA);
+    service.add(SOLANA_OTHER_CASE);
+    succeed(SOLANA);
+    succeed(SOLANA_OTHER_CASE);
+    service.remove(SOLANA_OTHER_CASE);
+    expect(service.wallets().map((item) => item.address)).toEqual([SOLANA]);
   });
 
   it('cancels the request of a removed wallet', () => {

@@ -15,9 +15,11 @@ em iterações futuras.
 - **EUR (toggle de moeda)** — cortado na definição do MVP para simplificar;
   Alchemy Price API já devolve USD nativo, EUR exigiria taxa de câmbio
   extra
-- **Carteiras Solana, Starknet e Tron** — a Alchemy já está habilitada, mas
+- **Carteiras Starknet e Tron** — a Alchemy já está habilitada, mas
   usam outro formato de endereço; exige entrada e validação próprias
   (adiado em 2026-10-26, quando as redes EVM passaram de 3 para 16)
+- **Plataformas de stake (EVM e Solana)** — SOL delegado em stake accounts e
+  posições de staking em protocolos; pedido do usuário em 2026-10-29
 - **Sonic, Sei e Astar** — habilitadas na Alchemy, mas a Portfolio API não
   aceita essas redes e o RPC delas não lista ERC-20; dá para mostrar só o
   saldo nativo. Rever quando a Alchemy ampliar o suporte

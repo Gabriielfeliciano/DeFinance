@@ -2,7 +2,7 @@
 
 **Veja quanto vale uma carteira cripto em segundos, sem conectar nada.**
 
-DeFinance é um painel de portfólio somente leitura para carteiras EVM. Você cola o endereço público de até 3 carteiras e o app mostra os tokens, o valor total em dólar e a distribuição por ativo em **17 redes EVM**, de Ethereum, Arbitrum e Base a Polygon, BNB Chain e Avalanche, tudo em uma tela.
+DeFinance é um painel de portfólio somente leitura para carteiras EVM e Solana. Você cola o endereço público de até 3 carteiras e o app mostra os tokens, o valor total em dólar e a distribuição por ativo em **17 redes EVM e Solana**, de Ethereum, Arbitrum e Base a Polygon, BNB Chain, Avalanche e Solana, tudo em uma tela.
 
 ### 👉 [Abrir a demo ao vivo](https://de-finance-psi.vercel.app)
 
@@ -24,6 +24,7 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 ## Funcionalidades
 
 - **Visão consolidada de 17 redes EVM:** Ethereum, Arbitrum, Base, Optimism, Polygon, BNB Chain, Avalanche, zkSync, Linea, Scroll, Berachain, Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain, consultadas em paralelo e somadas em um único resultado.
+- **Carteiras Solana:** SOL e tokens SPL, no mesmo campo das carteiras EVM. O app reconhece o formato do endereço sozinho, e a carteira Solana conta dentro do limite de 3. Endereços Solana distinguem maiúsculas de minúsculas, então são mantidos exatamente como colados.
 - **Valor total em destaque**, em USD.
 - **Gráfico de distribuição:** o mesmo ativo em redes diferentes vira uma fatia só, e os ativos menores são agrupados em "Outros" para o gráfico continuar legível.
 - **Lista de tokens** com quantidade, preço unitário e valor, ordenada do maior para o menor.
@@ -45,18 +46,19 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 
 ```mermaid
 flowchart LR
-    U["Navegador<br/>(Angular)"] -->|"GET /api/tokens?address=0x…"| F["Função serverless<br/>no Vercel"]
-    F -->|"17 consultas em paralelo"| A["Alchemy<br/>Portfolio API"]
+    U["Navegador<br/>(Angular)"] -->|"GET /api/tokens?address=…"| F["Função serverless<br/>no Vercel"]
+    F -->|"17 consultas EVM em paralelo<br/>ou 1 consulta Solana"| A["Alchemy<br/>Portfolio API"]
     A --- E["Ethereum"]
     A --- R["Arbitrum"]
     A --- B["Base"]
     A --- M["+ 14 redes EVM"]
+    A --- S["Solana<br/>(SOL + SPL)"]
     F -.->|"preços que faltarem"| P["Alchemy<br/>Prices API"]
     F -->|"JSON limpo e consolidado"| U
 ```
 
-1. O navegador valida o endereço e chama uma única rota, `/api/tokens`.
-2. A função serverless consulta a Alchemy nas 17 redes ao mesmo tempo, percorre a paginação e remove duplicados. Quando a Alchemy não manda o preço do token nativo de uma rede (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain), uma única chamada extra à Prices API completa. Na Robinhood Chain, onde nem os ERC-20 vêm com preço, a Prices API também é consultada por contrato, e o que continuar sem preço (spam) fica de fora.
+1. O navegador valida o endereço (0x para EVM ou base58 para Solana) e chama uma única rota, `/api/tokens`.
+2. A função serverless consulta a Alchemy nas 17 redes EVM ao mesmo tempo (ou só na Solana, quando o endereço é Solana), percorre a paginação e remove duplicados. Quando a Alchemy não manda o preço do token nativo de uma rede (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain), uma única chamada extra à Prices API completa. Na Robinhood Chain, onde nem os ERC-20 vêm com preço, a Prices API também é consultada por contrato, e o que continuar sem preço (spam) fica de fora.
 3. A mesma função filtra spam e poeira, converte saldos e preços e soma o total.
 4. O navegador recebe uma resposta pronta para exibir. Não há cálculo pesado no front.
 
@@ -81,14 +83,14 @@ flowchart LR
 
 ## Qualidade
 
-**166 testes automatizados**, todos passando:
+**265 testes automatizados**, todos passando:
 
-- **77 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
-- **89 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
+- **125 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
+- **140 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
 
 ## Rodando localmente
 
-**Pré-requisitos:** Node.js 24, uma conta no [Vercel](https://vercel.com) e uma chave da [Alchemy](https://dashboard.alchemy.com) com as 17 redes acima habilitadas. Rede não habilitada no app da Alchemy aparece no aviso de falha parcial.
+**Pré-requisitos:** Node.js 24, uma conta no [Vercel](https://vercel.com) e uma chave da [Alchemy](https://dashboard.alchemy.com) com as 17 redes acima e a Solana habilitadas. Rede não habilitada no app da Alchemy aparece no aviso de falha parcial.
 
 ```bash
 npm install
@@ -129,8 +131,9 @@ docs/         Documento de design e backlog
 
 ## Limitações conhecidas
 
-- Aceita apenas endereços `0x`. Nomes ENS (como `vitalik.eth`) ainda não são resolvidos.
-- Apenas redes EVM. Solana, Starknet e Tron (outro formato de endereço) e Sonic, Sei e Astar (sem suporte na Portfolio API da Alchemy) ficam de fora.
+- Aceita endereços `0x` (EVM) e endereços Solana. Nomes ENS (como `vitalik.eth`) ainda não são resolvidos.
+- Redes EVM e Solana. Starknet e Tron (outro formato de endereço) e Sonic, Sei e Astar (sem suporte na Portfolio API da Alchemy) ficam de fora.
+- Solana: SOL delegado em stake accounts não entra no total, e tokens SPL sem preço na Alchemy ficam de fora (como PYUSD e USDG).
 - Valores apenas em USD.
 - O spam é filtrado por heurística. Um token de spam que tenha preço de mercado pode aparecer.
 - Carteiras muito grandes são lidas até 5 páginas por rede (cerca de 500 tokens).
@@ -140,7 +143,6 @@ docs/         Documento de design e backlog
 Planejados para versões futuras (detalhes em [`docs/backlog.md`](docs/backlog.md)):
 
 - Posições em protocolos DeFi (staking, liquidez, empréstimos)
-- Várias carteiras ao mesmo tempo
 - Histórico da evolução do patrimônio
 - Alertas e notificações
 - Valores em EUR

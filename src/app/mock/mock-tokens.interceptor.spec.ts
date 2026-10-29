@@ -2,13 +2,14 @@ import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } fr
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TokensResponse } from '../../../shared/token';
-import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO } from './mock-portfolio';
+import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO } from './mock-portfolio';
 import {
   MOCK_EMPTY_ADDRESS,
   MOCK_ERROR_ADDRESS,
   MOCK_LATENCY_MS,
   MOCK_PARTIAL_ADDRESS,
   MOCK_SECOND_ADDRESS,
+  MOCK_SOLANA_ADDRESS,
   mockTokensInterceptor,
 } from './mock-tokens.interceptor';
 
@@ -46,6 +47,15 @@ describe('mockTokensInterceptor', () => {
     expect(result.body).toBeUndefined();
     vi.advanceTimersByTime(MOCK_LATENCY_MS);
     expect(result.body).toEqual(MOCK_PORTFOLIO);
+  });
+
+  it('answers the Solana portfolio for a Solana address, case preserved', () => {
+    const result = getTokens(MOCK_SOLANA_ADDRESS);
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(result.body).toEqual(MOCK_SOLANA_PORTFOLIO);
+    const other = getTokens('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM');
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(other.body).toEqual(MOCK_SOLANA_PORTFOLIO);
   });
 
   it('answers an empty wallet for the zero address', () => {

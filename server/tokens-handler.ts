@@ -1,8 +1,8 @@
-import { isValidEvmAddress } from '../shared/address';
-import { CHAINS, type ChainId, type TokensResponse } from '../shared/token';
+import { addressKind, type AddressKind } from '../shared/address';
+import { EVM_CHAINS, type ChainId, type TokensResponse } from '../shared/token';
 import { fetchChainTokens, fetchPricesByAddress, fetchPricesBySymbol } from './alchemy-client';
 import type { AlchemyToken } from './alchemy-types';
-import { CHAIN_CONFIG } from './chains';
+import { CHAIN_CONFIG, contractKey } from './chains';
 import type { LogoSource } from './coingecko-logos';
 import {
   alchemyUsdPrice,
@@ -29,12 +29,18 @@ interface LoadedChain {
   logos: LogoIndex | undefined;
 }
 
+/** Redes consultadas para cada tipo de endereço: um endereço EVM nunca vai à Solana e vice-versa. */
+function chainsFor(kind: AddressKind): readonly ChainId[] {
+  return kind === 'solana' ? ['solana'] : EVM_CHAINS;
+}
+
 export async function handleTokensRequest(
   request: Request,
   deps: TokensHandlerDeps,
 ): Promise<Response> {
   const address = (new URL(request.url).searchParams.get('address') ?? '').trim();
-  if (!isValidEvmAddress(address)) {
+  const kind = addressKind(address);
+  if (!kind) {
     return Response.json({ error: 'Endereço inválido' }, { status: 400 });
   }
 
@@ -46,10 +52,13 @@ export async function handleTokensRequest(
   const redact = (error: unknown) =>
     (error instanceof Error ? error.message : String(error)).replaceAll(apiKey, '***');
 
+  // Base58 diferencia maiúsculas: só o EVM é normalizado para minúsculas.
+  const walletAddress = kind === 'evm' ? address.toLowerCase() : address;
+  const chains = chainsFor(kind);
   const settled = await Promise.allSettled(
-    CHAINS.map(async (chain): Promise<LoadedChain> => {
+    chains.map(async (chain): Promise<LoadedChain> => {
       const [raw, logos] = await Promise.all([
-        fetchChainTokens(address.toLowerCase(), chain, apiKey, deps.fetchFn),
+        fetchChainTokens(walletAddress, chain, apiKey, deps.fetchFn),
         deps.logos?.forChain(chain),
       ]);
       return { chain, raw, logos };
@@ -61,8 +70,8 @@ export async function handleTokensRequest(
   const failedChains: ChainId[] = [];
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return void loaded.push(result.value);
-    failedChains.push(CHAINS[i]);
-    console.error(`Falha ao consultar a Alchemy (${CHAINS[i]}):`, redact(result.reason));
+    failedChains.push(chains[i]);
+    console.error(`Falha ao consultar a Alchemy (${chains[i]}):`, redact(result.reason));
   });
   if (loaded.length === 0) {
     return Response.json({ error: 'Falha ao consultar saldos' }, { status: 502 });
@@ -99,7 +108,7 @@ async function fetchMissingNativePrices(
 ): Promise<Map<string, number>> {
   const symbols = new Set(
     loaded
-      .filter(({ raw }) => raw.some(isUnpricedNative))
+      .filter(({ chain, raw }) => raw.some((token) => isUnpricedNative(token, chain)))
       .map(({ chain }) => CHAIN_CONFIG[chain].native.symbol),
   );
   if (symbols.size === 0) return new Map();
@@ -122,7 +131,7 @@ async function fetchMissingContractPrices(
       .map(async ({ chain, raw }): Promise<[ChainId, PriceIndex]> => {
         const contracts = raw
           .filter(isUnpricedErc20)
-          .map((token) => token.tokenAddress!.toLowerCase());
+          .map((token) => contractKey(chain, token.tokenAddress!));
         if (contracts.length === 0) return [chain, new Map()];
         const prices = await fetchPricesByAddress(chain, contracts, apiKey, fetchFn).catch(
           (error: unknown) => {
@@ -144,10 +153,10 @@ function isUnpricedErc20(token: AlchemyToken): boolean {
   );
 }
 
-function isUnpricedNative(token: AlchemyToken): boolean {
+function isUnpricedNative(token: AlchemyToken, chain: ChainId): boolean {
   return (
     token.tokenAddress === null &&
     !(alchemyUsdPrice(token) > 0) &&
-    toDecimal(token.tokenBalance, 18) > 0
+    toDecimal(token.tokenBalance, CHAIN_CONFIG[chain].native.decimals ?? 18) > 0
   );
 }

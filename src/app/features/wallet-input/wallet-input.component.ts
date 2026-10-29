@@ -1,5 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
-import { isValidEvmAddress } from '../../../../shared/address';
+import { addressKey, addressKind } from '../../../../shared/address';
 
 @Component({
   selector: 'app-wallet-input',
@@ -20,7 +20,7 @@ export class WalletInputComponent {
   protected readonly locked = computed(() => this.disabled() || this.full());
   protected readonly placeholder = computed(() => {
     const count = this.addresses().length;
-    if (count === 0) return '0x…';
+    if (count === 0) return 'Endereço EVM (0x…) ou Solana';
     if (this.full()) return `${count} de ${this.max()} carteiras`;
     return `Adicionar carteira (${count} de ${this.max()})`;
   });
@@ -35,8 +35,9 @@ export class WalletInputComponent {
     event.preventDefault();
     const address = this.value().trim();
 
-    if (isValidEvmAddress(address)) {
-      if (this.addresses().some((added) => added.toLowerCase() === address.toLowerCase())) {
+    if (addressKind(address) !== null) {
+      // Só EVM vira minúscula; Solana distingue maiúsculas.
+      if (this.addresses().some((added) => addressKey(added) === addressKey(address))) {
         this.error.set('Essa carteira já foi adicionada.');
         return;
       }
@@ -52,7 +53,7 @@ export class WalletInputComponent {
     } else if (/\.eth$/i.test(address)) {
       this.error.set('Nomes ENS ainda não são suportados. Cole o endereço 0x.');
     } else {
-      this.error.set('Endereço inválido. Use 0x seguido de 40 caracteres hexadecimais.');
+      this.error.set('Endereço inválido. Use um endereço EVM (0x…) ou Solana.');
     }
   }
 }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AERO, CBBTC_CHECKSUM, coingeckoList } from './__fixtures__/coingecko-tokens';
-import { LOGO_TTL_MS, createCoinGeckoLogos } from './coingecko-logos';
+import { LOGO_TTL_MS, createCoinGeckoLogos, type CoinGeckoToken } from './coingecko-logos';
 
 const AERO_ADDRESS = '0x940181a94a35a4569e4529a3cdfb74e38fd98631';
 const CBBTC_ADDRESS = '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf';
@@ -127,5 +127,35 @@ describe('createCoinGeckoLogos', () => {
     const logos = createCoinGeckoLogos({ fetchFn: hanging, timeoutMs: 10 });
 
     expect((await logos.forChain('base')).size).toBe(0);
+  });
+});
+
+describe('createCoinGeckoLogos (case)', () => {
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const SPL = {
+    chainId: null,
+    address: USDC_MINT,
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    logoURI: 'https://assets.coingecko.com/coins/images/6319/thumb/usdc.png',
+  } as unknown as CoinGeckoToken;
+
+  it('keeps the mint case in the solana index', async () => {
+    const index = await createCoinGeckoLogos({
+      fetchFn: fakeCoinGecko(coingeckoList([SPL])),
+    }).forChain('solana');
+    expect(index.get(USDC_MINT)).toBe(
+      'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+    );
+    expect(index.has(USDC_MINT.toLowerCase())).toBe(false);
+  });
+
+  it('still lowercases the EVM index', async () => {
+    const index = await createCoinGeckoLogos({
+      fetchFn: fakeCoinGecko(coingeckoList([CBBTC_CHECKSUM])),
+    }).forChain('base');
+    expect(index.has(CBBTC_ADDRESS)).toBe(true);
+    expect(index.has(CBBTC_CHECKSUM.address)).toBe(false);
   });
 });

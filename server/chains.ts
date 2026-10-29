@@ -1,10 +1,12 @@
 import type { ChainId } from '../shared/token';
 
-/** Token nativo da rede: a Alchemy devolve o metadata dele todo `null`. Sempre 18 decimais. */
+/** Token nativo da rede: a Alchemy devolve o metadata dele todo `null`. 18 decimais, salvo se `decimals` disser outro valor. */
 export interface NativeToken {
   symbol: string;
   name: string;
   logo: string;
+  /** Ausente = 18. */
+  decimals?: number;
 }
 
 /** O que o servidor precisa saber de cada rede. Rede nova: uma entrada aqui + `CHAINS`. */
@@ -14,7 +16,7 @@ export interface ChainConfig {
   /** Slug da lista pública `tokens.coingecko.com/<slug>/all.json`. */
   coingecko: string;
   native: NativeToken;
-  /** A Portfolio API manda os ERC-20 desta rede sem preço: ele vem da Prices API, por contrato. */
+  /** A Portfolio API manda os tokens de contrato (ERC-20/SPL) desta rede sem preço: ele vem da Prices API, por contrato. */
   erc20PricesByAddress?: boolean;
 }
 
@@ -90,4 +92,19 @@ export const CHAIN_CONFIG: Record<ChainId, ChainConfig> = {
     native: ETH,
     erc20PricesByAddress: true,
   },
+  solana: {
+    alchemy: 'solana-mainnet',
+    coingecko: 'solana',
+    native: {
+      symbol: 'SOL',
+      name: 'Solana',
+      logo: `${COIN_IMAGES}/4128/small/solana.png`,
+      decimals: 9,
+    },
+  },
 };
+
+/** Chave de um contrato nos índices: o mint da Solana é case-sensitive, o EVM vai em minúsculas. */
+export function contractKey(chain: ChainId, address: string): string {
+  return chain === 'solana' ? address : address.toLowerCase();
+}

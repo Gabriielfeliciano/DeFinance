@@ -1,6 +1,6 @@
 <header class="hero">
   <h1 class="brand">DeFinance</h1>
-  <p class="tagline">Cole até {{ maxWallets }} endereços públicos de carteira para ver seus ativos somados em {{ chainCount }} redes EVM: Ethereum, Arbitrum, Base, Polygon e outras.</p>
+  <p class="tagline">Cole até {{ maxWallets }} endereços públicos de carteira para ver seus ativos somados em {{ evmChainCount }} redes EVM e na Solana: Ethereum, Arbitrum, Base, Polygon e outras.</p>
   <app-wallet-input [addresses]="addresses()" [max]="maxWallets" (addressSubmit)="onAddress($event)" />
 </header>
 
@@ -54,7 +54,7 @@
   @case ('empty') {
     <div class="card empty" data-testid="empty">
       <p class="empty-title">Nenhum ativo com valor de mercado encontrado</p>
-      <p class="empty-text">Esta carteira não tem tokens com preço em nenhuma das {{ chainCount }} redes suportadas.</p>
+      <p class="empty-text">Esta carteira não tem tokens com preço em nenhuma das redes suportadas.</p>
     </div>
   }
   @case ('success') {

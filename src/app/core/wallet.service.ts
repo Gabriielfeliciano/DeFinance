@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
+import { addressKey } from '../../../shared/address';
 import { CHAINS, type ChainId, type TokensResponse } from '../../../shared/token';
 import { mergeTokens, portfolioStatus, type WalletState } from './portfolio';
 
@@ -11,12 +12,12 @@ export const MAX_WALLETS = 3;
 
 export type AddResult = 'added' | 'duplicate' | 'full';
 
-const key = (address: string) => address.toLowerCase();
+const key = addressKey;
 
 @Injectable({ providedIn: 'root' })
 export class WalletService {
   private readonly http = inject(HttpClient);
-  /** Uma requisição por carteira, pela chave em minúsculas. */
+  /** Uma requisição por carteira, pela chave (`addressKey`). */
   private readonly requests = new Map<string, Subscription>();
 
   private readonly _wallets = signal<WalletState[]>([]);

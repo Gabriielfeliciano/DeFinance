@@ -12,6 +12,12 @@ describe('toChartData', () => {
     expect(data.values).toEqual([1000, 500]);
   });
 
+  it('merges USDC on solana and on ethereum into one slice', () => {
+    const data = toChartData([token('USDC', 300, 'solana'), token('USDC', 200, 'ethereum')]);
+    expect(data.labels).toEqual(['USDC']);
+    expect(data.values).toEqual([500]);
+  });
+
   it('sorts slices by value, largest first', () => {
     const data = toChartData([token('A', 1), token('B', 3), token('C', 2)]);
     expect(data.labels).toEqual(['B', 'C', 'A']);

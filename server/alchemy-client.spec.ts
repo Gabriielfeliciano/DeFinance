@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { SOL_PRICES_BY_ADDRESS, SOL_USDC_MINT } from './__fixtures__/alchemy-solana';
 import {
   ETH_NATIVE,
   PRICES_BY_ADDRESS,
@@ -208,5 +209,13 @@ describe('fetchPricesByAddress', () => {
 
     expect(error).toBeInstanceOf(AlchemyError);
     expect((error as Error).message).not.toContain(API_KEY);
+  });
+});
+
+describe('fetchPricesByAddress (Solana)', () => {
+  it('keeps the mint case in the returned map', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => jsonResponse(SOL_PRICES_BY_ADDRESS));
+    const prices = await fetchPricesByAddress('solana', [SOL_USDC_MINT], API_KEY, fetchFn);
+    expect(prices).toEqual(new Map([[SOL_USDC_MINT, 0.9998]]));
   });
 });

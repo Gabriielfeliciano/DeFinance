@@ -21,7 +21,8 @@ export function formatAmount(value: number): string {
   return value >= 1 ? AMOUNT.format(value) : AMOUNT_SMALL.format(value);
 }
 
-/** `0xd8dA…6045`: prefixo, 4 caracteres e os 4 últimos. */
+/** `0xd8dA…6045` (EVM: prefixo, 4 caracteres e os 4 últimos) ou `86xC…2MMY` (Solana). */
 export function shortAddress(address: string): string {
+  if (!address.startsWith('0x')) return `${address.slice(0, 4)}…${address.slice(-4)}`;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }

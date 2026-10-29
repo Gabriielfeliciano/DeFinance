@@ -3,8 +3,9 @@
 Itens descartados do MVP durante o brainstorm de 2026-10-12, para considerar
 em iterações futuras.
 
-- **Posições em protocolos DeFi** (staking, liquidez, lending) — exige
-  integração com cada protocolo individualmente, escopo grande demais
+- **Outros protocolos de lending (Compound, Spark, Morpho; Kamino/marginfi
+  na Solana) e stake (EVM e Solana)** — exige integração com cada protocolo
+  individualmente. Aave v3 feita em 2026-10-29
 - **Login / autenticação** — MVP é 100% somente-leitura e sem persistência
   de usuário
 - **Salvar carteiras por usuário** — a multi-carteira (até 3, feita em

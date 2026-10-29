@@ -2,8 +2,17 @@ import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } fr
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TokensResponse } from '../../../shared/token';
-import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO } from './mock-portfolio';
+import { isValidEvmAddress } from '../../../shared/address';
 import {
+  MOCK_AAVE_DANGER_PORTFOLIO,
+  MOCK_AAVE_DOWN_PORTFOLIO,
+  MOCK_AAVE_PORTFOLIO,
+  MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO,
+} from './mock-portfolio';
+import {
+  MOCK_AAVE_ADDRESS,
+  MOCK_AAVE_DANGER_ADDRESS,
+  MOCK_AAVE_DOWN_ADDRESS,
   MOCK_EMPTY_ADDRESS,
   MOCK_ERROR_ADDRESS,
   MOCK_LATENCY_MS,
@@ -81,6 +90,31 @@ describe('mockTokensInterceptor', () => {
     const result = getTokens(MOCK_SECOND_ADDRESS);
     vi.advanceTimersByTime(MOCK_LATENCY_MS);
     expect(result.body).toEqual(MOCK_SECOND_PORTFOLIO);
+  });
+
+  it('serves the Aave portfolios for the Aave demo addresses', () => {
+    for (const [address, portfolio] of [
+      [MOCK_AAVE_ADDRESS, MOCK_AAVE_PORTFOLIO],
+      [MOCK_AAVE_DANGER_ADDRESS, MOCK_AAVE_DANGER_PORTFOLIO],
+      [MOCK_AAVE_DOWN_ADDRESS, MOCK_AAVE_DOWN_PORTFOLIO],
+    ] as const) {
+      expect(isValidEvmAddress(address)).toBe(true);
+      const result = getTokens(address);
+      vi.advanceTimersByTime(MOCK_LATENCY_MS);
+      expect(result.body).toEqual(portfolio);
+    }
+    expect(MOCK_AAVE_PORTFOLIO.lending?.map((m) => m.healthFactor)).toEqual([1.38, 2.3]);
+    expect(MOCK_AAVE_PORTFOLIO.lendingFailed).toBe(false);
+    expect(MOCK_AAVE_DANGER_PORTFOLIO.lending?.[0].healthFactor).toBe(1.05);
+    expect(MOCK_AAVE_DOWN_PORTFOLIO.lendingFailed).toBe(true);
+    expect(MOCK_AAVE_DOWN_PORTFOLIO.lending).toEqual([]);
+    expect(MOCK_AAVE_DOWN_PORTFOLIO.tokens.some((t) => t.symbol === 'aEthWBTC')).toBe(true);
+  });
+
+  it('keeps the existing mocks free of lending data', () => {
+    for (const portfolio of [MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO]) {
+      expect(portfolio.lending).toBeUndefined();
+    }
   });
 
   it('lets every other request through to the real backend', () => {

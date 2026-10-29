@@ -25,6 +25,7 @@ Para testar, use a carteira pública de Vitalik Buterin, cofundador do Ethereum:
 
 - **Visão consolidada de 17 redes EVM:** Ethereum, Arbitrum, Base, Optimism, Polygon, BNB Chain, Avalanche, zkSync, Linea, Scroll, Berachain, Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain, consultadas em paralelo e somadas em um único resultado.
 - **Carteiras Solana:** SOL e tokens SPL, no mesmo campo das carteiras EVM. O app reconhece o formato do endereço sozinho, e a carteira Solana conta dentro do limite de 3. Endereços Solana distinguem maiúsculas de minúsculas, então são mantidos exatamente como colados.
+- **Posições na Aave v3:** para carteiras EVM, o app mostra o que foi depositado e o que foi emprestado em cada mercado da Aave, com o health factor (cores de alerta perto da liquidação). Com posição na Aave, o valor total vira **patrimônio líquido** (tokens + depositado − emprestado), e os aTokens deixam de aparecer duplicados na lista.
 - **Valor total em destaque**, em USD.
 - **Gráfico de distribuição:** o mesmo ativo em redes diferentes vira uma fatia só, e os ativos menores são agrupados em "Outros" para o gráfico continuar legível.
 - **Lista de tokens** com quantidade, preço unitário e valor, ordenada do maior para o menor.
@@ -54,6 +55,7 @@ flowchart LR
     A --- M["+ 14 redes EVM"]
     A --- S["Solana<br/>(SOL + SPL)"]
     F -.->|"preços que faltarem"| P["Alchemy<br/>Prices API"]
+    F -->|"posições de lending<br/>(carteiras EVM)"| V["Aave API<br/>(GraphQL v3)"]
     F -->|"JSON limpo e consolidado"| U
 ```
 
@@ -83,10 +85,10 @@ flowchart LR
 
 ## Qualidade
 
-**265 testes automatizados**, todos passando:
+**339 testes automatizados**, todos passando:
 
-- **125 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
-- **140 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
+- **159 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
+- **180 no servidor:** validação de endereço, conversão dos dados da Alchemy, posições da Aave, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
 
 ## Rodando localmente
 
@@ -133,6 +135,7 @@ docs/         Documento de design e backlog
 
 - Aceita endereços `0x` (EVM) e endereços Solana. Nomes ENS (como `vitalik.eth`) ainda não são resolvidos.
 - Redes EVM e Solana. Starknet e Tron (outro formato de endereço) e Sonic, Sei e Astar (sem suporte na Portfolio API da Alchemy) ficam de fora.
+- Aave: só a v3, sem APY nem rendimento acumulado. Outros protocolos de lending e stake ainda não aparecem.
 - Solana: SOL delegado em stake accounts não entra no total, e tokens SPL sem preço na Alchemy ficam de fora (como PYUSD e USDG).
 - Valores apenas em USD.
 - O spam é filtrado por heurística. Um token de spam que tenha preço de mercado pode aparecer.

@@ -1,3 +1,5 @@
+import type { LendingMarket } from './lending';
+
 /** Redes EVM consultadas, na ordem dos chips do filtro. */
 export const EVM_CHAINS = [
   'ethereum',
@@ -65,4 +67,8 @@ export interface TokensResponse {
   totalValueUsd: number;
   /** Redes que falharam: `tokens` e o total vêm sem elas. */
   failedChains: ChainId[];
+  /** Posições de empréstimo (Aave v3). */
+  lending?: LendingMarket[];
+  /** A consulta à Aave falhou: `lending` vem ausente. */
+  lendingFailed?: boolean;
 }

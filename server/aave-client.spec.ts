@@ -8,6 +8,7 @@ import {
 } from './__fixtures__/aave';
 import {
   AAVE_API_URL,
+  AAVE_TIMEOUT_MS,
   AaveError,
   fetchAaveHealthFactors,
   fetchAaveMarkets,
@@ -99,5 +100,25 @@ describe('fetchAaveHealthFactors', () => {
     await expect(
       fetchAaveHealthFactors(AAVE_USER, AAVE_MARKETS, fakeAave({}, 500)),
     ).rejects.toBeInstanceOf(AaveError);
+  });
+});
+
+describe('timeout', () => {
+  const hanging = () =>
+    vi.fn<typeof fetch>(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+        }),
+    );
+
+  it('uses 8 seconds by default', () => {
+    expect(AAVE_TIMEOUT_MS).toBe(8_000);
+  });
+
+  it('rejects with AaveError when the request never answers', async () => {
+    await expect(fetchAaveMarkets([1], hanging(), 20)).rejects.toBeInstanceOf(AaveError);
+    await expect(fetchAaveHealthFactors(AAVE_USER, AAVE_MARKETS, hanging(), 20)).rejects.toBeInstanceOf(AaveError);
+    await expect(fetchAaveUserPositions(AAVE_USER, AAVE_MARKETS, hanging(), 20)).rejects.toBeInstanceOf(AaveError);
   });
 });

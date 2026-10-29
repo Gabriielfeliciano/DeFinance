@@ -118,7 +118,9 @@ export class DashboardComponent {
       const chains = Object.keys(this.chainCounts()).length;
       return chains === 1 ? 'Ativos em 1 rede' : `Ativos em ${chains} redes`;
     }
-    const count = this.visibleTokens().length + this.visibleLending().length;
+    const markets = this.visibleLending().length;
+    const count = this.visibleTokens().length + markets;
+    if (markets > 0) return count === 1 ? '1 ativo nesta rede' : `${count} ativos nesta rede`;
     return count === 1 ? '1 token nesta rede' : `${count} tokens nesta rede`;
   });
 

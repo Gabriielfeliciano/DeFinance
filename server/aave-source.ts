@@ -1,5 +1,9 @@
 import type { LendingMarket } from '../shared/lending';
-import { fetchAaveHealthFactors, fetchAaveMarkets, fetchAaveUserPositions } from './aave-client';
+import {
+  AAVE_TIMEOUT_MS,
+  fetchAaveHealthFactors,   fetchAaveMarkets,
+  fetchAaveUserPositions,
+} from './aave-client';
 import { chainFromAaveId, toLendingMarkets } from './aave-mapper';
 import type { AaveMarket } from './aave-types';
 import { CHAIN_CONFIG, contractKey } from './chains';
@@ -21,6 +25,7 @@ export interface AaveSourceOptions {
   fetchFn?: typeof fetch;
   now?: () => number;
   marketsTtlMs?: number;
+  timeoutMs?: number;
 }
 
 /**
@@ -32,6 +37,7 @@ export function createAaveSource({
   fetchFn = fetch,
   now = Date.now,
   marketsTtlMs = AAVE_MARKETS_TTL_MS,
+  timeoutMs = AAVE_TIMEOUT_MS,
 }: AaveSourceOptions = {}): AaveSource {
   let cache: { fetchedAt: number; markets: AaveMarket[] } | undefined;
   const chainIds = Object.values(CHAIN_CONFIG).flatMap((config) =>
@@ -41,7 +47,7 @@ export function createAaveSource({
   async function loadMarkets(): Promise<AaveMarket[]> {
     if (cache && now() - cache.fetchedAt < marketsTtlMs) return cache.markets;
     try {
-      const markets = await fetchAaveMarkets(chainIds, fetchFn);
+      const markets = await fetchAaveMarkets(chainIds, fetchFn, timeoutMs);
       cache = { fetchedAt: now(), markets };
       return markets;
     } catch (error) {
@@ -56,8 +62,8 @@ export function createAaveSource({
       const markets = await loadMarkets();
       const user = address.toLowerCase();
       const [{ supplies, borrows }, health] = await Promise.all([
-        fetchAaveUserPositions(user, markets, fetchFn),
-        fetchAaveHealthFactors(user, markets, fetchFn),
+        fetchAaveUserPositions(user, markets, fetchFn, timeoutMs),
+        fetchAaveHealthFactors(user, markets, fetchFn, timeoutMs),
       ]);
       return {
         markets: toLendingMarkets(markets, supplies, borrows, health),

@@ -71,6 +71,26 @@ describe('toLendingMarkets', () => {
     );
   });
 
+  it.each([
+    ['null', null],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['negative', -1],
+  ])('throws when a market with borrows has a %s health factor', (_name, value) => {
+    const bad = new Map([[healthKey(1, AAVE_MARKETS[0].address), value]]);
+    expect(() => toLendingMarkets(AAVE_MARKETS, AAVE_SUPPLIES, AAVE_BORROWS, bad)).toThrow(
+      AaveError,
+    );
+  });
+
+  it('keeps the real health factor when every borrow is dust', () => {
+    const dustDebt = { ...AAVE_BORROWS[0], debt: { amount: { value: '0.001' }, usd: '0.001' } };
+    const [market] = toLendingMarkets(AAVE_MARKETS, AAVE_SUPPLIES, [dustDebt], health);
+    expect(market.borrowed).toEqual([]);
+    expect(market.healthFactor).toBeCloseTo(1.38291, 4);
+  });
+
   it('drops markets on chains the app does not cover', () => {
     const unknown: AaveMarket = { ...AAVE_MARKETS[0], chain: { chainId: 100, name: 'Gnosis' } };
     const supply = { ...AAVE_SUPPLIES[0], market: { name: unknown.name, chain: { chainId: 100 } } };

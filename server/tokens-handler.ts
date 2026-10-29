@@ -123,7 +123,7 @@ export async function handleTokensRequest(
   };
   // Resultado parcial não vai para a CDN: o próximo acesso tenta de novo.
   const partial = failedChains.length > 0 || aaveFailed;
-  const hasBorrow = lending.some((market) => market.borrowed.length > 0);
+  const hasBorrow = lending.some((market) => market.healthFactor !== null);
   const cacheControl = partial ? 'no-store' : hasBorrow ? BORROW_CACHE_CONTROL : CACHE_CONTROL;
   return Response.json(body, { headers: { 'cache-control': cacheControl } });
 }

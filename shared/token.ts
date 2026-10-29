@@ -69,6 +69,6 @@ export interface TokensResponse {
   failedChains: ChainId[];
   /** Posições de empréstimo (Aave v3). */
   lending?: LendingMarket[];
-  /** A consulta à Aave falhou: `lending` vem ausente. */
+  /** A consulta à Aave falhou: `lending` vem vazio. */
   lendingFailed?: boolean;
 }

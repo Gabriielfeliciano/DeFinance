@@ -5,7 +5,7 @@ export type HealthLevel = 'danger' | 'warning' | 'safe';
 
 /** Abaixo de 1,1 perigo; de 1,1 a 1,5 atenção; acima de 1,5 seguro. */
 export function healthLevel(hf: number): HealthLevel {
-  if (hf < 1.1) return 'danger';
+  if (!Number.isFinite(hf) || hf < 1.1) return 'danger';
   return hf <= 1.5 ? 'warning' : 'safe';
 }
 

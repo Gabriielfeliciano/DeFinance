@@ -26,7 +26,7 @@ import {
   SOL_WALLET,
 } from './__fixtures__/alchemy-solana';
 import type { LendingMarket } from '../shared/lending';
-import type { AaveResult, AaveSource } from './aave-source';
+import { createAaveSource, type AaveResult, type AaveSource } from './aave-source';
 import { BORROW_CACHE_CONTROL, CACHE_CONTROL, handleTokensRequest } from './tokens-handler';
 
 const ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
@@ -468,8 +468,30 @@ describe('handleTokensRequest', () => {
       expect(errorLog).toHaveBeenCalled();
     });
 
+    it('still answers 200 with lendingFailed when the real Aave client times out', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const hangingFetch = vi.fn<typeof fetch>(
+        (_url, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+          }),
+      );
+      const source = createAaveSource({ fetchFn: hangingFetch, timeoutMs: 20 });
+      const response = await call(source);
+      const body = await response.json();
+      expect(response.status).toBe(200);
+      expect(body.lendingFailed).toBe(true);
+      expect(body.lending).toEqual([]);
+    });
+
     it('uses BORROW_CACHE_CONTROL when any market has a borrow', async () => {
       const { source } = aave({ markets: [market([debt])], aTokens: new Set() });
+      const response = await call(source);
+      expect(response.headers.get('cache-control')).toBe(BORROW_CACHE_CONTROL);
+    });
+
+    it('uses BORROW_CACHE_CONTROL when the only debt is dust (health factor present)', async () => {
+      const { source } = aave({ markets: [{ ...market(), healthFactor: 1.4 }], aTokens: new Set() });
       const response = await call(source);
       expect(response.headers.get('cache-control')).toBe(BORROW_CACHE_CONTROL);
     });

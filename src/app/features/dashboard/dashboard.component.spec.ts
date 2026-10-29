@@ -339,6 +339,16 @@ describe('DashboardComponent', () => {
       expect(el.querySelectorAll('[data-testid="token-row"]').length).toBe(0);
     });
 
+    it('counts assets, not tokens, when the chain has an Aave market', async () => {
+      const { fixture, el } = await renderAave();
+      el.querySelector<HTMLButtonElement>('[data-testid="chip-base"]')!.click();
+      await fixture.whenStable();
+      expect(text(el, 'summary-caption')).toBe('1 ativo nesta rede');
+      el.querySelector<HTMLButtonElement>('[data-testid="chip-ethereum"]')!.click();
+      await fixture.whenStable();
+      expect(text(el, 'summary-caption')).toBe('3 ativos nesta rede');
+    });
+
     it('keeps today labels without Aave', async () => {
       wallet.status.set('success');
       wallet.tokens.set([ETH]);

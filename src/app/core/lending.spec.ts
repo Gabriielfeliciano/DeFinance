@@ -28,6 +28,10 @@ describe('healthLevel', () => {
   ] as const)('%s is %s', (hf, level) => {
     expect(healthLevel(hf)).toBe(level);
   });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])('%s is danger', (hf) => {
+    expect(healthLevel(hf)).toBe('danger');
+  });
 });
 
 describe('formatHealthFactor', () => {

@@ -50,29 +50,39 @@ export function toLendingMarkets(
     const borrowed = assetsOf(market, borrowPositions);
     if (supplied.length === 0 && borrowed.length === 0) continue;
 
-    const key = healthKey(market.chain.chainId, market.address);
-    // Health factor ausente com empréstimo não pode virar "sem empréstimo".
-    if (borrowed.length > 0 && !health.has(key)) {
-      throw new AaveError(`health factor ausente para ${market.name}`);
+    // Decide pelo bruto: dívida abaixo do piso de poeira ainda tem health factor.
+    const hasBorrow = borrowPositions.some((position) => isIn(market, position));
+    let factor: number | null = null;
+    if (hasBorrow) {
+      const value = health.get(healthKey(market.chain.chainId, market.address));
+      // Ausente, nulo ou inválido com empréstimo nunca vira "sem empréstimo" nem verde.
+      if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        throw new AaveError(`health factor inválido para ${market.name}`);
+      }
+      factor = value;
     }
-    const factor = health.get(key) ?? null;
     result.push({
       id: `${chain}:${market.address.toLowerCase()}`,
       chain,
       label: aaveMarketLabel(chain, market.name),
       supplied,
       borrowed,
-      healthFactor: borrowed.length > 0 ? factor : null,
+      healthFactor: factor,
     });
   }
   return result;
 }
 
+function isIn(market: AaveMarket, position: Position): boolean {
+  return (
+    position.market.chain.chainId === market.chain.chainId && position.market.name === market.name
+  );
+}
+
 function assetsOf(market: AaveMarket, positions: readonly Position[]): LendingAsset[] {
   const assets: LendingAsset[] = [];
   for (const position of positions) {
-    if (position.market.chain.chainId !== market.chain.chainId) continue;
-    if (position.market.name !== market.name) continue;
+    if (!isIn(market, position)) continue;
 
     const valueUsd = Number(position.usd);
     if (!(valueUsd >= MIN_VALUE_USD)) continue;

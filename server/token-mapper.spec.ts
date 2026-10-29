@@ -11,6 +11,7 @@ import {
   USDC,
   ZERO_BALANCE,
 } from './__fixtures__/alchemy-tokens';
+import { SOL_NATIVE, SOL_SPAM, SOL_USDC, SOL_USDC_MINT } from './__fixtures__/alchemy-solana';
 import { buildPortfolio, toDecimal, toTokenItems } from './token-mapper';
 
 describe('toTokenItems', () => {
@@ -160,5 +161,40 @@ describe('buildPortfolio', () => {
 
   it('carries the chains that failed', () => {
     expect(buildPortfolio([], ['arbitrum', 'linea']).failedChains).toEqual(['arbitrum', 'linea']);
+  });
+});
+
+describe('toTokenItems (Solana)', () => {
+  it('maps native SOL with 9 decimals', () => {
+    const [sol] = toTokenItems([SOL_NATIVE], 'solana');
+    expect(sol).toMatchObject({
+      id: 'solana:native',
+      chain: 'solana',
+      symbol: 'SOL',
+      name: 'Solana',
+    });
+    expect(sol.balance).toBe(Number(BigInt(SOL_NATIVE.tokenBalance)) / 1e9);
+  });
+
+  it('keeps the mint case in id, logo and price lookups', () => {
+    const logos = new Map([[SOL_USDC_MINT, 'https://logo.test/usdc.png']]);
+    const noLogo = { ...SOL_USDC, tokenMetadata: { ...SOL_USDC.tokenMetadata!, logo: null } };
+    const [withLogo] = toTokenItems([noLogo], 'solana', logos);
+    expect(withLogo.id).toBe(`solana:${SOL_USDC_MINT}`);
+    expect(withLogo.logoUrl).toBe('https://logo.test/usdc.png');
+
+    const unpriced = { ...SOL_USDC, tokenPrices: [] };
+    const [priced] = toTokenItems(
+      [unpriced],
+      'solana',
+      new Map(),
+      undefined,
+      new Map([[SOL_USDC_MINT, 0.5]]),
+    );
+    expect(priced.priceUsd).toBe(0.5);
+  });
+
+  it('drops SOL_SPAM', () => {
+    expect(toTokenItems([SOL_SPAM], 'solana')).toEqual([]);
   });
 });

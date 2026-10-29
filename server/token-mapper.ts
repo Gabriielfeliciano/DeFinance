@@ -1,14 +1,14 @@
 import type { ChainId, TokenItem, TokensResponse } from '../shared/token';
 import type { AlchemyToken, AlchemyTokenMetadata } from './alchemy-types';
-import { CHAIN_CONFIG } from './chains';
+import { CHAIN_CONFIG, contractKey } from './chains';
 
 /** Abaixo disso o token é poeira: some da lista e do gráfico. */
 export const MIN_VALUE_USD = 0.01;
 
-/** Contrato em minúsculas → URL do logo. Preenche o que a Alchemy não manda. */
+/** Chave: `contractKey` → URL do logo. Preenche o que a Alchemy não manda. */
 export type LogoIndex = ReadonlyMap<string, string>;
 
-/** Contrato em minúsculas → preço em USD. Preenche o que a Alchemy não manda. */
+/** Chave: `contractKey` → preço em USD. Preenche o que a Alchemy não manda. */
 export type PriceIndex = ReadonlyMap<string, number>;
 
 /**
@@ -53,7 +53,7 @@ export function alchemyUsdPrice(token: AlchemyToken): number {
 
 /** A Alchemy devolve metadata `null` no nativo: vem do cadastro da rede. */
 function nativeMetadata(chain: ChainId): AlchemyTokenMetadata {
-  return { decimals: 18, ...CHAIN_CONFIG[chain].native };
+  return { ...CHAIN_CONFIG[chain].native, decimals: CHAIN_CONFIG[chain].native.decimals ?? 18 };
 }
 
 function toTokenItem(
@@ -63,7 +63,7 @@ function toTokenItem(
   nativePriceUsd: number | undefined,
   contractPrices: PriceIndex,
 ): TokenItem | null {
-  const contract = token.tokenAddress?.toLowerCase();
+  const contract = token.tokenAddress ? contractKey(chain, token.tokenAddress) : undefined;
   const meta = contract ? token.tokenMetadata : nativeMetadata(chain);
   if (token.error || !meta?.symbol || meta.decimals == null) return null;
 

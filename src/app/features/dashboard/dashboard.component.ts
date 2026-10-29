@@ -1,5 +1,5 @@
 import { Component, computed, inject, linkedSignal } from '@angular/core';
-import { CHAIN_LABELS, CHAINS, EVM_CHAINS, type ChainId } from '../../../../shared/token';
+import { CHAIN_LABELS, EVM_CHAINS, type ChainId } from '../../../../shared/token';
 import { shortAddress } from '../../core/format';
 import { MAX_WALLETS, WalletService } from '../../core/wallet.service';
 import { ChainFilterComponent, type ChainSelection } from '../chain-filter/chain-filter.component';
@@ -28,7 +28,6 @@ export class DashboardComponent {
   protected readonly wallet = inject(WalletService);
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
 
-  protected readonly chainCount = CHAINS.length;
   protected readonly evmChainCount = EVM_CHAINS.length;
   protected readonly maxWallets = MAX_WALLETS;
 

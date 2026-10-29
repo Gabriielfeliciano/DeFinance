@@ -55,6 +55,7 @@ export async function fetchChainTokens(
       throw new AlchemyError(`${network} falhou: ${body.error?.message ?? 'resposta sem data'}`);
     }
 
+    // contractKey dedupe tokens repetidos entre páginas; na Solana a Portfolio API devolveu uma entrada por mint (2026-10-29), então não somamos saldos
     for (const token of body.data.tokens) {
       byToken.set(token.tokenAddress ? contractKey(chain, token.tokenAddress) : 'native', token);
     }

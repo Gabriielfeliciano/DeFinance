@@ -83,10 +83,10 @@ flowchart LR
 
 ## Qualidade
 
-**166 testes automatizados**, todos passando:
+**265 testes automatizados**, todos passando:
 
-- **77 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
-- **89 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
+- **125 no front-end:** componentes, serviço de carteira, formatação de valores, tema e filtros.
+- **140 no servidor:** validação de endereço, conversão dos dados da Alchemy, token nativo de cada rede, filtros de spam, paginação, falhas parciais e proteção da chave da API.
 
 ## Rodando localmente
 
@@ -143,7 +143,6 @@ docs/         Documento de design e backlog
 Planejados para versões futuras (detalhes em [`docs/backlog.md`](docs/backlog.md)):
 
 - Posições em protocolos DeFi (staking, liquidez, empréstimos)
-- Várias carteiras ao mesmo tempo
 - Histórico da evolução do patrimônio
 - Alertas e notificações
 - Valores em EUR

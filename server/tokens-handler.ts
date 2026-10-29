@@ -1,5 +1,7 @@
+import type { LendingMarket } from '../shared/lending';
 import { addressKind, type AddressKind } from '../shared/address';
 import { EVM_CHAINS, type ChainId, type TokensResponse } from '../shared/token';
+import type { AaveResult, AaveSource } from './aave-source';
 import { fetchChainTokens, fetchPricesByAddress, fetchPricesBySymbol } from './alchemy-client';
 import type { AlchemyToken } from './alchemy-types';
 import { CHAIN_CONFIG, contractKey } from './chains';
@@ -18,10 +20,15 @@ export interface TokensHandlerDeps {
   fetchFn?: typeof fetch;
   /** Completa os logos que a Alchemy não manda; sem ele os tokens ficam com as iniciais. */
   logos?: LogoSource;
+  /** Posições Aave das carteiras EVM; sem ele a resposta não traz empréstimos. */
+  aave?: AaveSource;
 }
 
 /** Cache na CDN do Vercel por endereço: poupa CU da Alchemy em demos repetidas. */
 export const CACHE_CONTROL = 'public, s-maxage=60, stale-while-revalidate=300';
+
+/** Com dívida o fator de saúde muda rápido: cache curto em vez do normal. */
+export const BORROW_CACHE_CONTROL = 'public, s-maxage=15';
 
 interface LoadedChain {
   chain: ChainId;
@@ -55,6 +62,13 @@ export async function handleTokensRequest(
   // Base58 diferencia maiúsculas: só o EVM é normalizado para minúsculas.
   const walletAddress = kind === 'evm' ? address.toLowerCase() : address;
   const chains = chainsFor(kind);
+  // Aave só para EVM; a promessa nunca rejeita, para não vazar ao catch externo.
+  const aavePromise: Promise<AaveResult | Error> | undefined =
+    kind === 'evm' && deps.aave
+      ? deps.aave.forUser(walletAddress).catch((error: unknown) =>
+          error instanceof Error ? error : new Error(String(error)),
+        )
+      : undefined;
   const settled = await Promise.allSettled(
     chains.map(async (chain): Promise<LoadedChain> => {
       const [raw, logos] = await Promise.all([
@@ -73,6 +87,9 @@ export async function handleTokensRequest(
     failedChains.push(chains[i]);
     console.error(`Falha ao consultar a Alchemy (${chains[i]}):`, redact(result.reason));
   });
+  const aaveOutcome = await aavePromise;
+  const aaveFailed = aaveOutcome instanceof Error;
+  if (aaveFailed) console.error('Falha ao consultar a Aave:', redact(aaveOutcome));
   if (loaded.length === 0) {
     return Response.json({ error: 'Falha ao consultar saldos' }, { status: 502 });
   }
@@ -85,7 +102,7 @@ export async function handleTokensRequest(
     fetchMissingContractPrices(loaded, apiKey, deps.fetchFn, redact),
   ]);
 
-  const tokens = loaded.flatMap(({ chain, raw, logos }) =>
+  const allTokens = loaded.flatMap(({ chain, raw, logos }) =>
     toTokenItems(
       raw,
       chain,
@@ -94,9 +111,20 @@ export async function handleTokensRequest(
       contractPrices.get(chain),
     ),
   );
-  const body: TokensResponse = buildPortfolio(tokens, failedChains);
+  // aToken sai só pela chave exata; se a Aave falhou, ele continua como token.
+  const aaveResult = aaveOutcome instanceof Error ? undefined : aaveOutcome;
+  const tokens = aaveResult
+    ? allTokens.filter((token) => !aaveResult.aTokens.has(token.id))
+    : allTokens;
+  const lending: LendingMarket[] = aaveResult?.markets ?? [];
+  const body: TokensResponse = {
+    ...buildPortfolio(tokens, failedChains),
+    ...(aavePromise ? { lending, lendingFailed: aaveFailed } : {}),
+  };
   // Resultado parcial não vai para a CDN: o próximo acesso tenta de novo.
-  const cacheControl = failedChains.length > 0 ? 'no-store' : CACHE_CONTROL;
+  const partial = failedChains.length > 0 || aaveFailed;
+  const hasBorrow = lending.some((market) => market.borrowed.length > 0);
+  const cacheControl = partial ? 'no-store' : hasBorrow ? BORROW_CACHE_CONTROL : CACHE_CONTROL;
   return Response.json(body, { headers: { 'cache-control': cacheControl } });
 }
 

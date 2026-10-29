@@ -25,7 +25,9 @@ import {
   SOL_USDC_MINT,
   SOL_WALLET,
 } from './__fixtures__/alchemy-solana';
-import { CACHE_CONTROL, handleTokensRequest } from './tokens-handler';
+import type { LendingMarket } from '../shared/lending';
+import type { AaveResult, AaveSource } from './aave-source';
+import { BORROW_CACHE_CONTROL, CACHE_CONTROL, handleTokensRequest } from './tokens-handler';
 
 const ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
 const API_KEY = 'secret-key';
@@ -414,6 +416,111 @@ describe('handleTokensRequest', () => {
       ]);
       expect(body.totalValueUsd).toBeCloseTo(9671.242881139 * 101.06 + 33_000_000 * 0.9998, 0);
       expect(body.failedChains).toEqual([]);
+    });
+  });
+
+  describe('Aave', () => {
+    const USDC_KEY = 'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+    const market = (borrowed: LendingMarket['borrowed'] = []): LendingMarket => ({
+      id: 'ethereum:0xmarket',
+      chain: 'ethereum',
+      label: 'Aave · Ethereum',
+      supplied: [],
+      borrowed,
+      healthFactor: borrowed.length > 0 ? 2 : null,
+    });
+    const debt = { underlying: '0xabc', symbol: 'DAI', name: 'Dai', balance: 1, valueUsd: 1 };
+    const aave = (result: AaveResult | Error) => {
+      const forUser = vi.fn<AaveSource['forUser']>(async () => {
+        if (result instanceof Error) throw result;
+        return result;
+      });
+      return { source: { forUser } as AaveSource, forUser };
+    };
+    const call = (source: AaveSource | undefined, address = ADDRESS, fetchFn?: typeof fetch) =>
+      handleTokensRequest(request(`?address=${address}`), {
+        apiKey: API_KEY,
+        fetchFn:
+          fetchFn ?? fakeAlchemy({ 'eth-mainnet': alchemyPage([ETH_NATIVE, USDC]) }),
+        aave: source,
+      });
+
+    it('adds lending and removes aTokens for an EVM wallet', async () => {
+      const markets = [market()];
+      const { source } = aave({ markets, aTokens: new Set([USDC_KEY]) });
+      const response = await call(source);
+      const body = await response.json();
+      expect(body.lending).toEqual(markets);
+      expect(body.lendingFailed).toBe(false);
+      expect(body.tokens.map((t: { id: string }) => t.id)).toEqual(['ethereum:native']);
+      expect(body.totalValueUsd).toBeCloseTo(921.644, 3);
+    });
+
+    it('keeps aTokens and flags lendingFailed when Aave fails', async () => {
+      const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { source } = aave(new Error('aave down'));
+      const response = await call(source);
+      const body = await response.json();
+      expect(body.lendingFailed).toBe(true);
+      expect(body.lending).toEqual([]);
+      expect(body.tokens.map((t: { id: string }) => t.id)).toContain(USDC_KEY);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(errorLog).toHaveBeenCalled();
+    });
+
+    it('uses BORROW_CACHE_CONTROL when any market has a borrow', async () => {
+      const { source } = aave({ markets: [market([debt])], aTokens: new Set() });
+      const response = await call(source);
+      expect(response.headers.get('cache-control')).toBe(BORROW_CACHE_CONTROL);
+    });
+
+    it('uses CACHE_CONTROL when no market has a borrow', async () => {
+      const { source } = aave({ markets: [market()], aTokens: new Set() });
+      const response = await call(source);
+      expect(response.headers.get('cache-control')).toBe(CACHE_CONTROL);
+    });
+
+    it('prefers no-store over the borrow cache when a chain failed', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { source } = aave({ markets: [market([debt])], aTokens: new Set() });
+      const response = await call(
+        source,
+        ADDRESS,
+        fakeAlchemy({ 'eth-mainnet': alchemyPage([ETH_NATIVE]), 'arb-mainnet': 500 }),
+      );
+      expect(response.headers.get('cache-control')).toBe('no-store');
+    });
+
+    it('never calls Aave for a Solana wallet', async () => {
+      const { source, forUser } = aave({ markets: [], aTokens: new Set() });
+      const response = await call(source, SOL_WALLET, fakeAlchemy({}));
+      const body = await response.json();
+      expect(forUser).not.toHaveBeenCalled();
+      expect(body).not.toHaveProperty('lending');
+      expect(body).not.toHaveProperty('lendingFailed');
+    });
+
+    it('omits lending fields for an EVM wallet without an Aave source', async () => {
+      const body = await (await call(undefined)).json();
+      expect(body).not.toHaveProperty('lending');
+      expect(body).not.toHaveProperty('lendingFailed');
+    });
+
+    it('calls Aave with the address in the form Findings require', async () => {
+      const { source, forUser } = aave({ markets: [], aTokens: new Set() });
+      await call(source);
+      expect(forUser).toHaveBeenCalledWith(ADDRESS.toLowerCase());
+    });
+
+    it('still returns 502 when every chain fails even if Aave succeeds', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { source } = aave({ markets: [market()], aTokens: new Set() });
+      const response = await call(
+        source,
+        ADDRESS,
+        vi.fn<typeof fetch>(async () => new Response('down', { status: 503 })),
+      );
+      expect(response.status).toBe(502);
     });
   });
 });

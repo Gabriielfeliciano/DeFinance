@@ -3,12 +3,16 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription, timeout } from 'rxjs';
 import { addressKey } from '../../../shared/address';
 import { CHAINS, type ChainId, type TokensResponse } from '../../../shared/token';
-import { mergeTokens, portfolioStatus, type WalletState } from './portfolio';
+import type { LendingMarket } from '../../../shared/lending';
+import { mergeTokens, portfolioStatus, walletNetUsd, type WalletState } from './portfolio';
 
 export type { PortfolioStatus as WalletStatus } from './portfolio';
 
 export const REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_WALLETS = 3;
+
+/** Mercado com a carteira dona da posição. */
+export type WalletLending = LendingMarket & { wallet: string };
 
 export type AddResult = 'added' | 'duplicate' | 'full';
 
@@ -34,7 +38,14 @@ export class WalletService {
 
   readonly status = computed(() => portfolioStatus(this.enabled(), this._wallets().length));
   readonly tokens = computed(() => mergeTokens(this.loaded().map((wallet) => wallet.tokens)));
-  readonly totalValueUsd = computed(() => this.loaded().reduce((sum, wallet) => sum + wallet.totalValueUsd, 0));
+  /** Valor líquido: tokens + depositado - emprestado. */
+  readonly totalValueUsd = computed(() => this.loaded().reduce((sum, wallet) => sum + walletNetUsd(wallet), 0));
+  /** Posições na Aave das carteiras ligadas que carregaram. */
+  readonly lending = computed<WalletLending[]>(() =>
+    this.loaded().flatMap((wallet) => wallet.lending.map((market) => ({ ...market, wallet: wallet.address }))),
+  );
+  /** Carteiras ligadas em que a Aave falhou: o líquido vem sem ela. */
+  readonly lendingFailedWallets = computed(() => this.loaded().filter((wallet) => wallet.lendingFailed));
   /** Redes que o proxy não conseguiu consultar em alguma carteira ligada. */
   readonly failedChains = computed(() => {
     // Inclui as vazias: as redes que falharam podem ser justamente onde estão os tokens.
@@ -82,7 +93,7 @@ export class WalletService {
   /** Refaz as carteiras ligadas com erro ou com redes que falharam. */
   retryFailed(): void {
     for (const wallet of this.enabled()) {
-      if (wallet.status === 'error' || wallet.failedChains.length > 0) this.fetch(wallet.address);
+      if (wallet.status === 'error' || wallet.failedChains.length > 0 || wallet.lendingFailed) this.fetch(wallet.address);
     }
   }
 
@@ -96,12 +107,15 @@ export class WalletService {
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
         // `failedChains` ausente = resposta antiga, ainda no cache da CDN: trata como completa.
+        // `lending`/`lendingFailed` ausentes = sem Aave (resposta antiga ou Solana).
         next: (response) =>
           this.patch(address, {
-            status: response.tokens.length > 0 ? 'success' : 'empty',
+            status: response.tokens.length > 0 || (response.lending?.length ?? 0) > 0 ? 'success' : 'empty',
             tokens: response.tokens,
             totalValueUsd: response.totalValueUsd,
             failedChains: response.failedChains ?? [],
+            lending: response.lending ?? [],
+            lendingFailed: response.lendingFailed ?? false,
           }),
         error: () => this.patch(address, { status: 'error' }),
       });
@@ -109,7 +123,7 @@ export class WalletService {
   }
 
   private loadingState(address: string, enabled: boolean): WalletState {
-    return { address, enabled, status: 'loading', tokens: [], totalValueUsd: 0, failedChains: [] };
+    return { address, enabled, status: 'loading', tokens: [], totalValueUsd: 0, failedChains: [], lending: [], lendingFailed: false };
   }
 
   private find(address: string): WalletState | undefined {

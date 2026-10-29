@@ -22,7 +22,7 @@ class FakeWalletService {
 }
 
 function walletState(address: string, changes: Partial<WalletState> = {}): WalletState {
-  return { address, enabled: true, status: 'success', tokens: [], totalValueUsd: 920, failedChains: [], ...changes };
+  return { address, enabled: true, status: 'success', tokens: [], totalValueUsd: 920, failedChains: [], lending: [], lendingFailed: false, ...changes };
 }
 
 const ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';

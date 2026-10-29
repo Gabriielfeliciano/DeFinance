@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import type { LendingMarket } from '../../../shared/lending';
 import type { ChainId, TokenItem, TokensResponse } from '../../../shared/token';
 import { MAX_WALLETS, REQUEST_TIMEOUT_MS, WalletService } from './wallet.service';
 
@@ -251,5 +252,66 @@ describe('WalletService', () => {
     vi.advanceTimersByTime(REQUEST_TIMEOUT_MS);
     expect(wallet(ADDRESS_A).status).toBe('error');
     expect(req.cancelled).toBe(true);
+  });
+
+  describe('lending', () => {
+    const MARKET: LendingMarket = {
+      id: 'ethereum:0xa',
+      chain: 'ethereum',
+      label: 'Aave · Ethereum',
+      supplied: [{ underlying: '0xweth', symbol: 'WETH', name: 'WETH', balance: 1, valueUsd: 1000 }],
+      borrowed: [{ underlying: '0xdai', symbol: 'DAI', name: 'DAI', balance: 400, valueUsd: 400 }],
+      healthFactor: 1.8,
+    };
+    const withLending = (tokens: TokenItem[], extra: Partial<TokensResponse>): TokensResponse => ({
+      ...response(tokens),
+      ...extra,
+    });
+
+    it('a wallet with only lending is success', () => {
+      service.add(ADDRESS_A);
+      expectTokensRequest(ADDRESS_A).flush(withLending([], { lending: [MARKET] }));
+      expect(wallet(ADDRESS_A).status).toBe('success');
+      expect(service.status()).toBe('success');
+    });
+
+    it('a response without lending gives an empty list and no failure', () => {
+      service.add(ADDRESS_A);
+      succeed(ADDRESS_A);
+      expect(wallet(ADDRESS_A)).toMatchObject({ lending: [], lendingFailed: false });
+    });
+
+    it('totalValueUsd is net across enabled wallets', () => {
+      service.add(ADDRESS_A);
+      service.add(ADDRESS_B);
+      expectTokensRequest(ADDRESS_A).flush(withLending([ETH], { lending: [MARKET] }));
+      succeed(ADDRESS_B);
+      expect(service.totalValueUsd()).toBe(920 + 1000 - 400 + 920);
+    });
+
+    it('does not expose markets of a disabled wallet', () => {
+      service.add(ADDRESS_A);
+      service.add(ADDRESS_B);
+      expectTokensRequest(ADDRESS_A).flush(withLending([ETH], { lending: [MARKET] }));
+      succeed(ADDRESS_B);
+      expect(service.lending()).toEqual([{ ...MARKET, wallet: ADDRESS_A }]);
+      service.toggle(ADDRESS_A);
+      expect(service.lending()).toEqual([]);
+    });
+
+    it('lists enabled wallets whose Aave query failed', () => {
+      service.add(ADDRESS_A);
+      expectTokensRequest(ADDRESS_A).flush(withLending([ETH], { lendingFailed: true }));
+      expect(service.lendingFailedWallets().map((item) => item.address)).toEqual([ADDRESS_A]);
+    });
+
+    it('retryFailed refetches a wallet with lendingFailed', () => {
+      service.add(ADDRESS_A);
+      expectTokensRequest(ADDRESS_A).flush(withLending([ETH], { lendingFailed: true }));
+      service.retryFailed();
+      expectTokensRequest(ADDRESS_A).flush(withLending([ETH], { lending: [MARKET] }));
+      expect(wallet(ADDRESS_A).lendingFailed).toBe(false);
+      expect(service.lending()).toHaveLength(1);
+    });
   });
 });

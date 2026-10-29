@@ -6,7 +6,7 @@ const ADDRESS_A = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
 const ADDRESS_B = '0x1a2B000000000000000000000000000000009f3c';
 
 function wallet(address: string, changes: Partial<WalletState> = {}): WalletState {
-  return { address, enabled: true, status: 'success', tokens: [], totalValueUsd: 920, failedChains: [], ...changes };
+  return { address, enabled: true, status: 'success', tokens: [], totalValueUsd: 920, failedChains: [], lending: [], lendingFailed: false, ...changes };
 }
 
 describe('WalletCardsComponent', () => {

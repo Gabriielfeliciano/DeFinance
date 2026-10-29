@@ -1,3 +1,4 @@
+import type { LendingMarket } from '../../../shared/lending';
 import type { ChainId, TokenItem } from '../../../shared/token';
 
 export type WalletLoadStatus = 'loading' | 'success' | 'empty' | 'error';
@@ -12,6 +13,21 @@ export interface WalletState {
   tokens: TokenItem[];
   totalValueUsd: number;
   failedChains: ChainId[];
+  /** Posições na Aave; vazio sem Aave ou se a consulta falhou. */
+  lending: LendingMarket[];
+  /** A consulta à Aave falhou: o valor líquido vem sem ela. */
+  lendingFailed: boolean;
+}
+
+/** Tokens + depositado - emprestado. Pode ficar negativo. */
+export function walletNetUsd(wallet: WalletState): number {
+  return wallet.lending.reduce(
+    (net, market) =>
+      net +
+      market.supplied.reduce((sum, asset) => sum + asset.valueUsd, 0) -
+      market.borrowed.reduce((sum, asset) => sum + asset.valueUsd, 0),
+    wallet.totalValueUsd,
+  );
 }
 
 /** Uma linha por `TokenItem.id`, somando saldo e valor; maior valor primeiro. */

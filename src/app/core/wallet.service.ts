@@ -44,8 +44,8 @@ export class WalletService {
   readonly lending = computed<WalletLending[]>(() =>
     this.loaded().flatMap((wallet) => wallet.lending.map((market) => ({ ...market, wallet: wallet.address }))),
   );
-  /** Carteiras ligadas em que a Aave falhou: o líquido vem sem ela. */
-  readonly lendingFailedWallets = computed(() => this.loaded().filter((wallet) => wallet.lendingFailed));
+  /** Carteiras ligadas que responderam, com ou sem tokens, em que a Aave falhou: o líquido vem sem ela. */
+  readonly lendingFailedWallets = computed(() => this.settled().filter((wallet) => wallet.lendingFailed));
   /** Redes que o proxy não conseguiu consultar em alguma carteira ligada. */
   readonly failedChains = computed(() => {
     // Inclui as vazias: as redes que falharam podem ser justamente onde estão os tokens.

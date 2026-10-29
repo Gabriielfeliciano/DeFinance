@@ -305,6 +305,13 @@ describe('WalletService', () => {
       expect(service.lendingFailedWallets().map((item) => item.address)).toEqual([ADDRESS_A]);
     });
 
+    it('lists an empty wallet whose Aave query failed', () => {
+      service.add(ADDRESS_A);
+      expectTokensRequest(ADDRESS_A).flush(withLending([], { lendingFailed: true }));
+      expect(wallet(ADDRESS_A).status).toBe('empty');
+      expect(service.lendingFailedWallets().map((item) => item.address)).toEqual([ADDRESS_A]);
+    });
+
     it('retryFailed refetches a wallet with lendingFailed', () => {
       service.add(ADDRESS_A);
       expectTokensRequest(ADDRESS_A).flush(withLending([ETH], { lendingFailed: true }));

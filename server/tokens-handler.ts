@@ -1,4 +1,4 @@
-import { isValidEvmAddress } from '../shared/address';
+import { addressKind, type AddressKind } from '../shared/address';
 import { EVM_CHAINS, type ChainId, type TokensResponse } from '../shared/token';
 import { fetchChainTokens, fetchPricesByAddress, fetchPricesBySymbol } from './alchemy-client';
 import type { AlchemyToken } from './alchemy-types';
@@ -29,12 +29,18 @@ interface LoadedChain {
   logos: LogoIndex | undefined;
 }
 
+/** Redes consultadas para cada tipo de endereço: um endereço EVM nunca vai à Solana e vice-versa. */
+function chainsFor(kind: AddressKind): readonly ChainId[] {
+  return kind === 'solana' ? ['solana'] : EVM_CHAINS;
+}
+
 export async function handleTokensRequest(
   request: Request,
   deps: TokensHandlerDeps,
 ): Promise<Response> {
   const address = (new URL(request.url).searchParams.get('address') ?? '').trim();
-  if (!isValidEvmAddress(address)) {
+  const kind = addressKind(address);
+  if (!kind) {
     return Response.json({ error: 'Endereço inválido' }, { status: 400 });
   }
 
@@ -46,10 +52,13 @@ export async function handleTokensRequest(
   const redact = (error: unknown) =>
     (error instanceof Error ? error.message : String(error)).replaceAll(apiKey, '***');
 
+  // Base58 diferencia maiúsculas: só o EVM é normalizado para minúsculas.
+  const walletAddress = kind === 'evm' ? address.toLowerCase() : address;
+  const chains = chainsFor(kind);
   const settled = await Promise.allSettled(
-    EVM_CHAINS.map(async (chain): Promise<LoadedChain> => {
+    chains.map(async (chain): Promise<LoadedChain> => {
       const [raw, logos] = await Promise.all([
-        fetchChainTokens(address.toLowerCase(), chain, apiKey, deps.fetchFn),
+        fetchChainTokens(walletAddress, chain, apiKey, deps.fetchFn),
         deps.logos?.forChain(chain),
       ]);
       return { chain, raw, logos };
@@ -61,8 +70,8 @@ export async function handleTokensRequest(
   const failedChains: ChainId[] = [];
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return void loaded.push(result.value);
-    failedChains.push(EVM_CHAINS[i]);
-    console.error(`Falha ao consultar a Alchemy (${EVM_CHAINS[i]}):`, redact(result.reason));
+    failedChains.push(chains[i]);
+    console.error(`Falha ao consultar a Alchemy (${chains[i]}):`, redact(result.reason));
   });
   if (loaded.length === 0) {
     return Response.json({ error: 'Falha ao consultar saldos' }, { status: 502 });

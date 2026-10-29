@@ -17,6 +17,14 @@ import {
   USDC,
   alchemyPage,
 } from './__fixtures__/alchemy-tokens';
+import {
+  SOL_NATIVE,
+  SOL_NO_METADATA,
+  SOL_SPAM,
+  SOL_USDC,
+  SOL_USDC_MINT,
+  SOL_WALLET,
+} from './__fixtures__/alchemy-solana';
 import { CACHE_CONTROL, handleTokensRequest } from './tokens-handler';
 
 const ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
@@ -60,6 +68,16 @@ describe('handleTokensRequest', () => {
   it('rejects an invalid address with 400 without calling Alchemy', async () => {
     const fetchFn = fakeAlchemy({});
     const response = await handleTokensRequest(request('?address=0x123'), {
+      apiKey: API_KEY,
+      fetchFn,
+    });
+    expect(response.status).toBe(400);
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('rejects a 44-character non-base58 string with 400', async () => {
+    const fetchFn = fakeAlchemy({});
+    const response = await handleTokensRequest(request(`?address=${'z'.repeat(44)}`), {
       apiKey: API_KEY,
       fetchFn,
     });
@@ -309,5 +327,93 @@ describe('handleTokensRequest', () => {
 
     expect(response.status).toBe(502);
     expect(JSON.stringify(errorLog.mock.calls)).not.toContain(API_KEY);
+  });
+
+  describe('Solana wallets', () => {
+    const networks = (fetchFn: ReturnType<typeof fakeAlchemy>) =>
+      fetchFn.mock.calls
+        .filter(([url]) => !String(url).includes('/prices/v1/'))
+        .map(([, init]) => JSON.parse(init!.body as string).addresses[0].networks[0]);
+
+    it('queries only Solana for a Solana address, untouched', async () => {
+      const fetchFn = fakeAlchemy({});
+      await handleTokensRequest(request(`?address=${SOL_WALLET}`), { apiKey: API_KEY, fetchFn });
+      expect(networks(fetchFn)).toEqual(['solana-mainnet']);
+      const sent = JSON.parse(fetchFn.mock.calls[0][1]!.body as string);
+      expect(sent.addresses[0].address).toBe(SOL_WALLET);
+    });
+
+    it('never queries Solana for an EVM address', async () => {
+      const fetchFn = fakeAlchemy({});
+      await handleTokensRequest(request(`?address=${ADDRESS}`), { apiKey: API_KEY, fetchFn });
+      expect(networks(fetchFn)).toHaveLength(17);
+      expect(networks(fetchFn)).not.toContain('solana-mainnet');
+    });
+
+    it('accepts a Solana address with spaces around it', async () => {
+      const fetchFn = fakeAlchemy({});
+      const response = await handleTokensRequest(request(`?address=%20${SOL_WALLET}%20`), {
+        apiKey: API_KEY,
+        fetchFn,
+      });
+      expect(response.status).toBe(200);
+      const sent = JSON.parse(fetchFn.mock.calls[0][1]!.body as string);
+      expect(sent.addresses[0].address).toBe(SOL_WALLET);
+    });
+
+    it('returns 502 when Solana fails', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const fetchFn = fakeAlchemy({ 'solana-mainnet': 503 });
+      const response = await handleTokensRequest(request(`?address=${SOL_WALLET}`), {
+        apiKey: API_KEY,
+        fetchFn,
+      });
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({ error: 'Falha ao consultar saldos' });
+    });
+
+    it('prices native SOL through Prices By Symbol when Alchemy sends none', async () => {
+      const fetchFn = fakeAlchemy(
+        { 'solana-mainnet': alchemyPage([{ ...SOL_NATIVE, tokenPrices: [] }]) },
+        {
+          data: [
+            {
+              symbol: 'SOL',
+              prices: [{ currency: 'usd', value: '101.06', lastUpdatedAt: '2026-10-29T18:00:00Z' }],
+            },
+          ],
+        },
+      );
+      const response = await handleTokensRequest(request(`?address=${SOL_WALLET}`), {
+        apiKey: API_KEY,
+        fetchFn,
+      });
+      expect(priceCalls(fetchFn)).toEqual([
+        `https://api.g.alchemy.com/prices/v1/${API_KEY}/tokens/by-symbol?symbols=SOL`,
+      ]);
+      const body = await response.json();
+      expect(body.tokens.map((t: { id: string; priceUsd: number }) => [t.id, t.priceUsd])).toEqual([
+        ['solana:native', 101.06],
+      ]);
+    });
+
+    it('returns SOL and USDC from the fixture with the total and CACHE_CONTROL', async () => {
+      const fetchFn = fakeAlchemy({
+        'solana-mainnet': alchemyPage([SOL_NATIVE, SOL_USDC, SOL_SPAM, SOL_NO_METADATA]),
+      });
+      const response = await handleTokensRequest(request(`?address=${SOL_WALLET}`), {
+        apiKey: API_KEY,
+        fetchFn,
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe(CACHE_CONTROL);
+      const body = await response.json();
+      expect(body.tokens.map((t: { id: string }) => t.id).sort()).toEqual([
+        `solana:${SOL_USDC_MINT}`,
+        'solana:native',
+      ]);
+      expect(body.totalValueUsd).toBeCloseTo(9671.242881139 * 101.06 + 33_000_000 * 0.9998, 0);
+      expect(body.failedChains).toEqual([]);
+    });
   });
 });

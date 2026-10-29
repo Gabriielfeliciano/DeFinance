@@ -1,7 +1,8 @@
 import { HttpErrorResponse, HttpResponse, type HttpInterceptorFn } from '@angular/common/http';
 import { delay, mergeMap, of, throwError, timer } from 'rxjs';
+import { addressKind } from '../../../shared/address';
 import type { TokensResponse } from '../../../shared/token';
-import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO } from './mock-portfolio';
+import { MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO } from './mock-portfolio';
 
 export const MOCK_LATENCY_MS = 900;
 /** Endereço que simula carteira vazia. */
@@ -12,12 +13,19 @@ export const MOCK_ERROR_ADDRESS = '0x000000000000000000000000000000000000dead';
 export const MOCK_PARTIAL_ADDRESS = '0x00000000000000000000000000000000000beef0';
 /** Segunda carteira, com tokens em comum com a de exemplo (multi-carteira). */
 export const MOCK_SECOND_ADDRESS = '0x00000000000000000000000000000000000000b2';
+/** Carteira Solana de exemplo. */
+export const MOCK_SOLANA_ADDRESS = '86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY';
 
 /** Responde `/api/tokens` com dados falsos. Só entra no build pela configuração `mock`. */
 export const mockTokensInterceptor: HttpInterceptorFn = (req, next) => {
   if (req.method !== 'GET' || !req.url.endsWith('/api/tokens')) return next(req);
 
-  const address = (req.params.get('address') ?? '').toLowerCase();
+  const raw = req.params.get('address') ?? '';
+  // Solana distingue maiúsculas: qualquer endereço dela recebe a carteira de exemplo.
+  if (addressKind(raw) === 'solana') {
+    return of(new HttpResponse({ status: 200, url: req.url, body: MOCK_SOLANA_PORTFOLIO })).pipe(delay(MOCK_LATENCY_MS));
+  }
+  const address = raw.toLowerCase();
   if (address === MOCK_ERROR_ADDRESS) {
     return timer(MOCK_LATENCY_MS).pipe(
       mergeMap(() =>

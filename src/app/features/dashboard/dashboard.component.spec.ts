@@ -63,6 +63,11 @@ describe('DashboardComponent', () => {
     expect(el.querySelector('app-wallet-input')).not.toBeNull();
   });
 
+  it('mentions the 17 EVM chains and Solana in the tagline', async () => {
+    const { el } = await render();
+    expect(el.querySelector('.tagline')?.textContent).toContain('17 redes EVM e na Solana');
+  });
+
   it('adds the wallet when a valid address is submitted', async () => {
     const { fixture } = await render();
     await submitAddress(fixture, ADDRESS);

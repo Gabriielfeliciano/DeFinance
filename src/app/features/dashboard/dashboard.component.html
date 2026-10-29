@@ -1,6 +1,6 @@
 <header class="hero">
   <h1 class="brand">DeFinance</h1>
-  <p class="tagline">Cole até {{ maxWallets }} endereços públicos de carteira para ver seus ativos somados em {{ chainCount }} redes EVM: Ethereum, Arbitrum, Base, Polygon e outras.</p>
+  <p class="tagline">Cole até {{ maxWallets }} endereços públicos de carteira para ver seus ativos somados em {{ evmChainCount }} redes EVM e na Solana: Ethereum, Arbitrum, Base, Polygon e outras.</p>
   <app-wallet-input [addresses]="addresses()" [max]="maxWallets" (addressSubmit)="onAddress($event)" />
 </header>
 

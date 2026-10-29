@@ -57,3 +57,17 @@ export const MOCK_SECOND_PORTFOLIO: TokensResponse = {
   totalValueUsd: secondTokens.reduce((total, item) => total + item.valueUsd, 0),
   failedChains: [],
 };
+
+const solanaTokens: TokenItem[] = [
+  token('solana', 'native', 'SOL', 'Solana', 12.4, 168.2, `${LOGO}/4128/small/solana.png`),
+  token('solana', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 'USDC', 'USD Coin', 850, 0.9998, `${LOGO}/6319/small/usdc.png`),
+  token('solana', 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', 'JUP', 'Jupiter', 1400, 0.74, `${LOGO}/34188/small/jup.png`),
+  token('solana', 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', 'BONK', 'Bonk', 25_000_000, 0.0000214, `${LOGO}/28600/small/bonk.jpg`),
+];
+
+/** Carteira Solana do modo mock: o USDC soma com o das carteiras EVM no gráfico. */
+export const MOCK_SOLANA_PORTFOLIO: TokensResponse = {
+  tokens: solanaTokens,
+  totalValueUsd: solanaTokens.reduce((total, item) => total + item.valueUsd, 0),
+  failedChains: [],
+};

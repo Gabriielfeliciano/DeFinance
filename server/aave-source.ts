@@ -9,7 +9,7 @@ export const AAVE_MARKETS_TTL_MS = 30 * 60_000;
 
 export interface AaveResult {
   markets: LendingMarket[];
-  /** `contractKey(chain, aToken)` de toda reserva de todo mercado (não só os da carteira). */
+  /** `<chain>:<contractKey(chain, aToken)>` (mesmo formato de `TokenItem.id`) de toda reserva de todo mercado (não só os da carteira). */
   aTokens: ReadonlySet<string>;
 }
 
@@ -72,7 +72,8 @@ function aTokenKeys(markets: readonly AaveMarket[]): Set<string> {
   for (const market of markets) {
     const chain = chainFromAaveId(market.chain.chainId);
     if (!chain) continue;
-    for (const reserve of market.reserves) keys.add(contractKey(chain, reserve.aToken.address));
+    for (const reserve of market.reserves)
+      keys.add(`${chain}:${contractKey(chain, reserve.aToken.address)}`);
   }
   return keys;
 }

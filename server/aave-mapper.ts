@@ -1,6 +1,6 @@
 import type { LendingAsset, LendingMarket } from '../shared/lending';
 import type { ChainId } from '../shared/token';
-import { healthKey } from './aave-client';
+import { AaveError, healthKey } from './aave-client';
 import type { AaveMarket, AaveUserBorrow, AaveUserSupply } from './aave-types';
 import { CHAIN_CONFIG, aaveMarketLabel } from './chains';
 import { MIN_VALUE_USD } from './token-mapper';
@@ -50,7 +50,12 @@ export function toLendingMarkets(
     const borrowed = assetsOf(market, borrowPositions);
     if (supplied.length === 0 && borrowed.length === 0) continue;
 
-    const factor = health.get(healthKey(market.chain.chainId, market.address)) ?? null;
+    const key = healthKey(market.chain.chainId, market.address);
+    // Health factor ausente com empréstimo não pode virar "sem empréstimo".
+    if (borrowed.length > 0 && !health.has(key)) {
+      throw new AaveError(`health factor ausente para ${market.name}`);
+    }
+    const factor = health.get(key) ?? null;
     result.push({
       id: `${chain}:${market.address.toLowerCase()}`,
       chain,

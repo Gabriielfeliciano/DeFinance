@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AAVE_BORROWS, AAVE_HEALTH, AAVE_MARKETS, AAVE_SUPPLIES } from './__fixtures__/aave';
-import { healthKey } from './aave-client';
+import { AaveError, healthKey } from './aave-client';
 import { toLendingMarkets } from './aave-mapper';
 import type { AaveMarket } from './aave-types';
 
@@ -63,6 +63,12 @@ describe('toLendingMarkets', () => {
     );
 
     expect(market.healthFactor).toBe(2);
+  });
+
+  it('throws when a market with borrows has no health factor entry', () => {
+    expect(() => toLendingMarkets(AAVE_MARKETS, AAVE_SUPPLIES, AAVE_BORROWS, new Map())).toThrow(
+      AaveError,
+    );
   });
 
   it('drops markets on chains the app does not cover', () => {

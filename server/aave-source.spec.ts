@@ -10,14 +10,19 @@ import { AaveError } from './aave-client';
 import { AAVE_MARKETS_TTL_MS, createAaveSource } from './aave-source';
 
 /** Fake da Aave que roteia pela query; `marketsFail` derruba só a lista de mercados. */
-function fakeAave(opts: { marketsFail?: () => boolean; positionsFail?: boolean } = {}) {
+function fakeAave(
+  opts: { marketsFail?: () => boolean; positionsFail?: boolean; healthFail?: boolean } = {},
+) {
   return vi.fn<typeof fetch>(async (_url, init) => {
     const query = JSON.parse(init?.body as string).query as string;
     if (query.includes('userSupplies')) {
       if (opts.positionsFail) return new Response('boom', { status: 500 });
       return Response.json({ data: { userSupplies: AAVE_SUPPLIES, userBorrows: AAVE_BORROWS } });
     }
-    if (query.includes('userState')) return Response.json({ data: { markets: AAVE_HEALTH } });
+    if (query.includes('userState')) {
+      if (opts.healthFail) return new Response('boom', { status: 500 });
+      return Response.json({ data: { markets: AAVE_HEALTH } });
+    }
     if (opts.marketsFail?.()) return new Response('boom', { status: 500 });
     return Response.json({ data: { markets: AAVE_MARKETS } });
   });
@@ -33,8 +38,8 @@ describe('createAaveSource', () => {
     const result = await source.forUser(AAVE_USER);
 
     expect(result.markets).toHaveLength(1);
-    expect(result.aTokens.has('0x5ee5bf7ae06d1be5997a1a72006fe6c607ec6de8')).toBe(true);
-    expect(result.aTokens.has('0x4e65fe4dba92790696d040ac24aa414708f5c0ab')).toBe(true);
+    expect(result.aTokens.has('ethereum:0x5ee5bf7ae06d1be5997a1a72006fe6c607ec6de8')).toBe(true);
+    expect(result.aTokens.has('base:0x4e65fe4dba92790696d040ac24aa414708f5c0ab')).toBe(true);
   });
 
   it('does not refetch markets within the TTL', async () => {
@@ -70,6 +75,11 @@ describe('createAaveSource', () => {
 
   it('rejects when positions fail', async () => {
     const source = createAaveSource({ fetchFn: fakeAave({ positionsFail: true }) });
+    await expect(source.forUser(AAVE_USER)).rejects.toBeInstanceOf(AaveError);
+  });
+
+  it('rejects when the health factor fetch fails', async () => {
+    const source = createAaveSource({ fetchFn: fakeAave({ healthFail: true }) });
     await expect(source.forUser(AAVE_USER)).rejects.toBeInstanceOf(AaveError);
   });
 });

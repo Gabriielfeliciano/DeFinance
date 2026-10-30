@@ -1,0 +1,40 @@
+<ul class="cards" aria-label="Carteiras">
+  @for (wallet of wallets(); track wallet.address) {
+    <li class="wallet-card" [class.wallet-card--off]="!wallet.enabled" data-testid="wallet-card">
+      <div class="head">
+        <label class="include">
+          <input
+            type="checkbox"
+            [checked]="wallet.enabled"
+            [disabled]="wallet.enabled && enabledCount() === 1"
+            [attr.aria-label]="'Incluir ' + short(wallet.address) + ' no total'"
+            (change)="toggle.emit(wallet.address)"
+          />
+          <span class="address" [title]="wallet.address">{{ short(wallet.address) }}</span>
+        </label>
+        <button
+          type="button"
+          class="remove"
+          [attr.aria-label]="'Remover ' + short(wallet.address)"
+          (click)="remove.emit(wallet.address)"
+        >
+          ✕
+        </button>
+      </div>
+      @switch (wallet.status) {
+        @case ('loading') {
+          <div class="skeleton value-skeleton" data-testid="wallet-card-loading"></div>
+        }
+        @case ('error') {
+          <div class="error">
+            <span>Não foi possível carregar</span>
+            <button type="button" class="retry" (click)="retry.emit(wallet.address)">Tentar novamente</button>
+          </div>
+        }
+        @default {
+          <strong class="value" data-testid="wallet-card-total">{{ usd(net(wallet)) }}</strong>
+        }
+      }
+    </li>
+  }
+</ul>

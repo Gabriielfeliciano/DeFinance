@@ -1,4 +1,4 @@
-import { formatAmount, formatPrice, formatUsd } from './format';
+import { formatAmount, formatPrice, formatUsd, shortAddress } from './format';
 
 describe('formatUsd', () => {
   it('formats totals as USD with cents', () => {
@@ -27,5 +27,15 @@ describe('formatAmount', () => {
 
   it('keeps significant digits for small amounts', () => {
     expect(formatAmount(0.00001234)).toBe('0.00001234');
+  });
+});
+
+describe('shortAddress', () => {
+  it('keeps the 0x prefix, the next 4 and the last 4 characters', () => {
+    expect(shortAddress('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')).toBe('0xd8dA…6045');
+  });
+
+  it('shows the first and last 4 characters of a Solana address', () => {
+    expect(shortAddress('86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY')).toBe('86xC…2MMY');
   });
 });

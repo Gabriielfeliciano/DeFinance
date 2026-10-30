@@ -5,10 +5,13 @@ import {
   ETH_NATIVE,
   NO_METADATA,
   PRICE_WITH_ERROR,
+  RH_TSLA,
+  RH_TSLA_CONTRACT,
   SPAM_NO_PRICE,
   USDC,
   ZERO_BALANCE,
 } from './__fixtures__/alchemy-tokens';
+import { SOL_NATIVE, SOL_SPAM, SOL_USDC, SOL_USDC_MINT } from './__fixtures__/alchemy-solana';
 import { buildPortfolio, toDecimal, toTokenItems } from './token-mapper';
 
 describe('toTokenItems', () => {
@@ -26,9 +29,12 @@ describe('toTokenItems', () => {
     expect(eth.valueUsd).toBeCloseTo(921.644, 3);
   });
 
-  it('maps the native token of an ETH L2 as ETH', () => {
-    const [eth] = toTokenItems([{ ...ETH_NATIVE, network: 'zora-mainnet' }], 'zora');
-    expect(eth).toMatchObject({ id: 'zora:native', symbol: 'ETH', logoUrl: '/tokens/eth.svg' });
+  it.each([
+    ['zora', 'zora-mainnet'],
+    ['robinhood', 'robinhood-mainnet'],
+  ] as const)('maps the native token of the %s L2 as ETH', (chain, network) => {
+    const [eth] = toTokenItems([{ ...ETH_NATIVE, network }], chain);
+    expect(eth).toMatchObject({ id: `${chain}:native`, symbol: 'ETH', logoUrl: '/tokens/eth.svg' });
   });
 
   it.each([
@@ -59,6 +65,23 @@ describe('toTokenItems', () => {
 
   it('never uses the native fallback price for an ERC-20 token', () => {
     expect(toTokenItems([{ ...USDC, tokenPrices: [] }], 'ethereum', new Map(), 2500)).toEqual([]);
+  });
+
+  it('prices an ERC-20 from the contract price index when Alchemy sends no price', () => {
+    const prices = new Map([[RH_TSLA_CONTRACT, 405.83]]);
+    const [tsla] = toTokenItems([RH_TSLA], 'robinhood', new Map(), undefined, prices);
+    expect(tsla).toMatchObject({
+      id: `robinhood:${RH_TSLA_CONTRACT}`,
+      symbol: 'TSLA',
+      balance: 1,
+      priceUsd: 405.83,
+    });
+  });
+
+  it('keeps the Alchemy ERC-20 price over the contract price index', () => {
+    const prices = new Map([['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 2]]);
+    const [usdc] = toTokenItems([USDC], 'ethereum', new Map(), undefined, prices);
+    expect(usdc.priceUsd).toBe(0.9998);
   });
 
   it('maps an ERC-20 token with a lowercased contract id and no logo', () => {
@@ -138,5 +161,40 @@ describe('buildPortfolio', () => {
 
   it('carries the chains that failed', () => {
     expect(buildPortfolio([], ['arbitrum', 'linea']).failedChains).toEqual(['arbitrum', 'linea']);
+  });
+});
+
+describe('toTokenItems (Solana)', () => {
+  it('maps native SOL with 9 decimals', () => {
+    const [sol] = toTokenItems([SOL_NATIVE], 'solana');
+    expect(sol).toMatchObject({
+      id: 'solana:native',
+      chain: 'solana',
+      symbol: 'SOL',
+      name: 'Solana',
+    });
+    expect(sol.balance).toBe(Number(BigInt(SOL_NATIVE.tokenBalance)) / 1e9);
+  });
+
+  it('keeps the mint case in id, logo and price lookups', () => {
+    const logos = new Map([[SOL_USDC_MINT, 'https://logo.test/usdc.png']]);
+    const noLogo = { ...SOL_USDC, tokenMetadata: { ...SOL_USDC.tokenMetadata!, logo: null } };
+    const [withLogo] = toTokenItems([noLogo], 'solana', logos);
+    expect(withLogo.id).toBe(`solana:${SOL_USDC_MINT}`);
+    expect(withLogo.logoUrl).toBe('https://logo.test/usdc.png');
+
+    const unpriced = { ...SOL_USDC, tokenPrices: [] };
+    const [priced] = toTokenItems(
+      [unpriced],
+      'solana',
+      new Map(),
+      undefined,
+      new Map([[SOL_USDC_MINT, 0.5]]),
+    );
+    expect(priced.priceUsd).toBe(0.5);
+  });
+
+  it('drops SOL_SPAM', () => {
+    expect(toTokenItems([SOL_SPAM], 'solana')).toEqual([]);
   });
 });

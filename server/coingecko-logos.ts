@@ -1,5 +1,5 @@
 import type { ChainId } from '../shared/token';
-import { CHAIN_CONFIG } from './chains';
+import { CHAIN_CONFIG, contractKey } from './chains';
 import type { LogoIndex } from './token-mapper';
 
 /** Mesmo `max-age` que a CoinGecko manda nas listas. */
@@ -9,7 +9,7 @@ export const LOGO_TTL_MS = 30 * 60_000;
 export const LOGO_TIMEOUT_MS = 3_000;
 
 export interface CoinGeckoToken {
-  chainId: number;
+  chainId: number | null;
   address: string;
   name: string;
   symbol: string;
@@ -81,7 +81,7 @@ async function fetchLogoIndex(
   for (const token of body.tokens) {
     // `thumb` tem 25px; `small` (50px) fica nítido no avatar de 32px.
     if (token.logoURI)
-      index.set(token.address.toLowerCase(), token.logoURI.replace('/thumb/', '/small/'));
+      index.set(contractKey(chain, token.address), token.logoURI.replace('/thumb/', '/small/'));
   }
   return index;
 }

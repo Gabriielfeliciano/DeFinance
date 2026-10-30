@@ -1,5 +1,7 @@
+import type { LendingMarket } from './lending';
+
 /** Redes EVM consultadas, na ordem dos chips do filtro. */
-export const CHAINS = [
+export const EVM_CHAINS = [
   'ethereum',
   'arbitrum',
   'base',
@@ -16,8 +18,13 @@ export const CHAINS = [
   'shape',
   'monad',
   'hyperevm',
+  'robinhood',
 ] as const;
 
+/** Todas as redes: as EVM e a Solana. */
+export const CHAINS = [...EVM_CHAINS, 'solana'] as const;
+
+export type EvmChainId = (typeof EVM_CHAINS)[number];
 export type ChainId = (typeof CHAINS)[number];
 
 export const CHAIN_LABELS: Record<ChainId, string> = {
@@ -37,10 +44,12 @@ export const CHAIN_LABELS: Record<ChainId, string> = {
   shape: 'Shape',
   monad: 'Monad',
   hyperevm: 'HyperEVM',
+  robinhood: 'Robinhood Chain',
+  solana: 'Solana',
 };
 
 export interface TokenItem {
-  /** Chave estável: `<chain>:<contrato em minúsculas | native>`. */
+  /** Chave estável: `<chain>:<contrato | native>`. O contrato vai em minúsculas nas EVM; o mint da Solana mantém a caixa. */
   id: string;
   chain: ChainId;
   symbol: string;
@@ -58,4 +67,8 @@ export interface TokensResponse {
   totalValueUsd: number;
   /** Redes que falharam: `tokens` e o total vêm sem elas. */
   failedChains: ChainId[];
+  /** Posições de empréstimo (Aave v3). */
+  lending?: LendingMarket[];
+  /** A consulta à Aave falhou: `lending` vem vazio. */
+  lendingFailed?: boolean;
 }

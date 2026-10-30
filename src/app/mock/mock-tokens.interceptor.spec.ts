@@ -2,12 +2,23 @@ import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } fr
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TokensResponse } from '../../../shared/token';
-import { MOCK_PORTFOLIO } from './mock-portfolio';
+import { isValidEvmAddress } from '../../../shared/address';
 import {
+  MOCK_AAVE_DANGER_PORTFOLIO,
+  MOCK_AAVE_DOWN_PORTFOLIO,
+  MOCK_AAVE_PORTFOLIO,
+  MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO,
+} from './mock-portfolio';
+import {
+  MOCK_AAVE_ADDRESS,
+  MOCK_AAVE_DANGER_ADDRESS,
+  MOCK_AAVE_DOWN_ADDRESS,
   MOCK_EMPTY_ADDRESS,
   MOCK_ERROR_ADDRESS,
   MOCK_LATENCY_MS,
   MOCK_PARTIAL_ADDRESS,
+  MOCK_SECOND_ADDRESS,
+  MOCK_SOLANA_ADDRESS,
   mockTokensInterceptor,
 } from './mock-tokens.interceptor';
 
@@ -47,6 +58,15 @@ describe('mockTokensInterceptor', () => {
     expect(result.body).toEqual(MOCK_PORTFOLIO);
   });
 
+  it('answers the Solana portfolio for a Solana address, case preserved', () => {
+    const result = getTokens(MOCK_SOLANA_ADDRESS);
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(result.body).toEqual(MOCK_SOLANA_PORTFOLIO);
+    const other = getTokens('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM');
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(other.body).toEqual(MOCK_SOLANA_PORTFOLIO);
+  });
+
   it('answers an empty wallet for the zero address', () => {
     const result = getTokens(MOCK_EMPTY_ADDRESS);
     vi.advanceTimersByTime(MOCK_LATENCY_MS);
@@ -66,6 +86,37 @@ describe('mockTokensInterceptor', () => {
     expect(result.body?.failedChains).toEqual(['linea', 'scroll']);
   });
 
+  it('serves the second portfolio for MOCK_SECOND_ADDRESS', () => {
+    const result = getTokens(MOCK_SECOND_ADDRESS);
+    vi.advanceTimersByTime(MOCK_LATENCY_MS);
+    expect(result.body).toEqual(MOCK_SECOND_PORTFOLIO);
+  });
+
+  it('serves the Aave portfolios for the Aave demo addresses', () => {
+    for (const [address, portfolio] of [
+      [MOCK_AAVE_ADDRESS, MOCK_AAVE_PORTFOLIO],
+      [MOCK_AAVE_DANGER_ADDRESS, MOCK_AAVE_DANGER_PORTFOLIO],
+      [MOCK_AAVE_DOWN_ADDRESS, MOCK_AAVE_DOWN_PORTFOLIO],
+    ] as const) {
+      expect(isValidEvmAddress(address)).toBe(true);
+      const result = getTokens(address);
+      vi.advanceTimersByTime(MOCK_LATENCY_MS);
+      expect(result.body).toEqual(portfolio);
+    }
+    expect(MOCK_AAVE_PORTFOLIO.lending?.map((m) => m.healthFactor)).toEqual([1.38, 2.3]);
+    expect(MOCK_AAVE_PORTFOLIO.lendingFailed).toBe(false);
+    expect(MOCK_AAVE_DANGER_PORTFOLIO.lending?.[0].healthFactor).toBe(1.05);
+    expect(MOCK_AAVE_DOWN_PORTFOLIO.lendingFailed).toBe(true);
+    expect(MOCK_AAVE_DOWN_PORTFOLIO.lending).toEqual([]);
+    expect(MOCK_AAVE_DOWN_PORTFOLIO.tokens.some((t) => t.symbol === 'aEthWBTC')).toBe(true);
+  });
+
+  it('keeps the existing mocks free of lending data', () => {
+    for (const portfolio of [MOCK_PORTFOLIO, MOCK_SECOND_PORTFOLIO, MOCK_SOLANA_PORTFOLIO]) {
+      expect(portfolio.lending).toBeUndefined();
+    }
+  });
+
   it('lets every other request through to the real backend', () => {
     http.get('/other').subscribe();
     backend.expectOne('/other').flush({});
@@ -82,5 +133,12 @@ describe('MOCK_PORTFOLIO', () => {
     expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.chain)).size).toBeGreaterThanOrEqual(6);
     expect(MOCK_PORTFOLIO.failedChains).toEqual([]);
     expect(new Set(MOCK_PORTFOLIO.tokens.map((token) => token.symbol)).size).toBeGreaterThan(7);
+  });
+});
+
+describe('MOCK_SECOND_PORTFOLIO', () => {
+  it('shares tokens with MOCK_PORTFOLIO so the merge shows up', () => {
+    const ids = new Set(MOCK_PORTFOLIO.tokens.map((token) => token.id));
+    expect(MOCK_SECOND_PORTFOLIO.tokens.filter((token) => ids.has(token.id)).length).toBeGreaterThanOrEqual(2);
   });
 });

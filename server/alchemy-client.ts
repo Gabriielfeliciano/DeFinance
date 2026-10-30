@@ -1,9 +1,18 @@
 import type { ChainId } from '../shared/token';
-import type { AlchemyPricesBySymbol, AlchemyToken, AlchemyTokensPage } from './alchemy-types';
-import { CHAIN_CONFIG } from './chains';
+import type {
+  AlchemyPricesByAddress,
+  AlchemyPricesBySymbol,
+  AlchemyToken,
+  AlchemyTokenPrice,
+  AlchemyTokensPage,
+} from './alchemy-types';
+import { CHAIN_CONFIG, contractKey } from './chains';
 
 /** Limite de páginas por rede: protege CU e tempo de resposta em carteiras gigantes. */
 export const MAX_PAGES = 5;
+
+/** Máximo de contratos por chamada ao Prices By Address (acima disso a Alchemy responde 400). */
+export const MAX_PRICE_ADDRESSES = 25;
 
 export class AlchemyError extends Error {
   constructor(message: string) {
@@ -46,8 +55,9 @@ export async function fetchChainTokens(
       throw new AlchemyError(`${network} falhou: ${body.error?.message ?? 'resposta sem data'}`);
     }
 
+    // contractKey dedupe tokens repetidos entre páginas; na Solana a Portfolio API devolveu uma entrada por mint (2026-10-29), então não somamos saldos
     for (const token of body.data.tokens) {
-      byToken.set(token.tokenAddress?.toLowerCase() ?? 'native', token);
+      byToken.set(token.tokenAddress ? contractKey(chain, token.tokenAddress) : 'native', token);
     }
     pageKey = body.data.pageKey ?? undefined;
     if (!pageKey) break;
@@ -73,9 +83,51 @@ export async function fetchPricesBySymbol(
   const body = (await response.json()) as AlchemyPricesBySymbol;
   const prices = new Map<string, number>();
   for (const entry of body.data ?? []) {
-    const usd = entry.prices.find((price) => price.currency.toLowerCase() === 'usd');
-    const value = Number(usd?.value);
+    const value = usdValue(entry.prices);
     if (value > 0) prices.set(entry.symbol, value);
   }
   return prices;
+}
+
+/**
+ * Preço em USD por contrato (Prices API), em lotes de `MAX_PRICE_ADDRESSES`.
+ * Chave: `contractKey`. Contrato sem preço fica de fora do mapa.
+ */
+export async function fetchPricesByAddress(
+  chain: ChainId,
+  contracts: readonly string[],
+  apiKey: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<Map<string, number>> {
+  const url = `https://api.g.alchemy.com/prices/v1/${apiKey}/tokens/by-address`;
+  const network = CHAIN_CONFIG[chain].alchemy;
+  const batches: string[][] = [];
+  for (let i = 0; i < contracts.length; i += MAX_PRICE_ADDRESSES) {
+    batches.push(contracts.slice(i, i + MAX_PRICE_ADDRESSES));
+  }
+
+  const pages = await Promise.all(
+    batches.map(async (batch) => {
+      const response = await fetchFn(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ addresses: batch.map((address) => ({ network, address })) }),
+      });
+      if (!response.ok) {
+        throw new AlchemyError(`prices by-address respondeu HTTP ${response.status}`);
+      }
+      return ((await response.json()) as AlchemyPricesByAddress).data ?? [];
+    }),
+  );
+
+  const prices = new Map<string, number>();
+  for (const entry of pages.flat()) {
+    const value = usdValue(entry.prices);
+    if (value > 0) prices.set(contractKey(chain, entry.address), value);
+  }
+  return prices;
+}
+
+function usdValue(prices: AlchemyTokenPrice[]): number {
+  return Number(prices.find((price) => price.currency.toLowerCase() === 'usd')?.value);
 }

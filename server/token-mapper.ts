@@ -1,25 +1,30 @@
 import type { ChainId, TokenItem, TokensResponse } from '../shared/token';
 import type { AlchemyToken, AlchemyTokenMetadata } from './alchemy-types';
-import { CHAIN_CONFIG } from './chains';
+import { CHAIN_CONFIG, contractKey } from './chains';
 
 /** Abaixo disso o token é poeira: some da lista e do gráfico. */
 export const MIN_VALUE_USD = 0.01;
 
-/** Contrato em minúsculas → URL do logo. Preenche o que a Alchemy não manda. */
+/** Chave: `contractKey` → URL do logo. Preenche o que a Alchemy não manda. */
 export type LogoIndex = ReadonlyMap<string, string>;
+
+/** Chave: `contractKey` → preço em USD. Preenche o que a Alchemy não manda. */
+export type PriceIndex = ReadonlyMap<string, number>;
 
 /**
  * `nativePriceUsd` vale só para o token nativo e só quando a Alchemy não manda
- * o preço dele (acontece em Zora, Unichain, Shape, Monad e HyperEVM).
+ * o preço dele (acontece em Zora, Unichain, Shape, Monad, HyperEVM e Robinhood Chain).
+ * `contractPrices` faz o mesmo para os ERC-20 (acontece na Robinhood Chain).
  */
 export function toTokenItems(
   raw: AlchemyToken[],
   chain: ChainId,
   logos: LogoIndex = new Map(),
   nativePriceUsd?: number,
+  contractPrices: PriceIndex = new Map(),
 ): TokenItem[] {
   return raw
-    .map((token) => toTokenItem(token, chain, logos, nativePriceUsd))
+    .map((token) => toTokenItem(token, chain, logos, nativePriceUsd, contractPrices))
     .filter((item): item is TokenItem => item !== null);
 }
 
@@ -48,7 +53,7 @@ export function alchemyUsdPrice(token: AlchemyToken): number {
 
 /** A Alchemy devolve metadata `null` no nativo: vem do cadastro da rede. */
 function nativeMetadata(chain: ChainId): AlchemyTokenMetadata {
-  return { decimals: 18, ...CHAIN_CONFIG[chain].native };
+  return { ...CHAIN_CONFIG[chain].native, decimals: CHAIN_CONFIG[chain].native.decimals ?? 18 };
 }
 
 function toTokenItem(
@@ -56,20 +61,21 @@ function toTokenItem(
   chain: ChainId,
   logos: LogoIndex,
   nativePriceUsd: number | undefined,
+  contractPrices: PriceIndex,
 ): TokenItem | null {
-  const isNative = token.tokenAddress === null;
-  const meta = isNative ? nativeMetadata(chain) : token.tokenMetadata;
+  const contract = token.tokenAddress ? contractKey(chain, token.tokenAddress) : undefined;
+  const meta = contract ? token.tokenMetadata : nativeMetadata(chain);
   if (token.error || !meta?.symbol || meta.decimals == null) return null;
 
   let priceUsd = alchemyUsdPrice(token);
-  if (isNative && !(priceUsd > 0) && nativePriceUsd !== undefined) priceUsd = nativePriceUsd;
+  if (!(priceUsd > 0))
+    priceUsd = (contract ? contractPrices.get(contract) : nativePriceUsd) ?? priceUsd;
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) return null;
 
   const balance = toDecimal(token.tokenBalance, meta.decimals);
   const valueUsd = balance * priceUsd;
   if (!(valueUsd >= MIN_VALUE_USD)) return null;
 
-  const contract = token.tokenAddress?.toLowerCase();
   return {
     id: `${chain}:${contract ?? 'native'}`,
     chain,
